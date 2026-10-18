@@ -1,0 +1,36 @@
+# Unreal generated folders
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# IDE / generated project files
+.vs/
+.vscode/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Compiled artifacts
+*.pdb
+*.dll
+*.exe
+*.lib
+*.obj
+*.pch
+*.ipch
+
+# Local environment and secrets
+.env*
+
+# OS noise
+Thumbs.db
+.DS_Store
