@@ -26,6 +26,9 @@ struct FUODayClock
 	/** Shift length taking the uo.ShiftSecondsOverride console variable into account */
 	static float GetShiftSecondsWithConsoleOverride(EUODayLength DayLength);
 
+	/** Raw uo.ShiftSecondsOverride value (0 or less = off) */
+	static float GetConsoleShiftSecondsOverride();
+
 	/** Minutes since midnight on the fake office clock */
 	static float ComputeTimeOfDayMinutes(float ElapsedSeconds, float ShiftLengthSeconds);
 

@@ -1,7 +1,7 @@
 @echo off
-rem UNPAID: OVERTIME - launches the playable MVP on the engine's empty Entry map with UOGameMode.
-rem No binary assets are required: the game mode builds the office, lights and sky at runtime.
-rem Tip: open the console (~) and type "uo.ShiftSecondsOverride 30" before clicking Create for a short shift.
+rem UNPAID: OVERTIME - launches the game on Lvl_Office (main menu -> setup -> day).
+rem Tips: open the console (~) and type "uo.ShiftSecondsOverride 60" before clicking Create for a short shift.
+rem Dev switches (non-Shipping): -UOAutoStart=Acme skips the menus; -UOShots runs the screenshot tour (RunShots.bat).
 
 setlocal
 set "PROJECT_DIR=%~dp0.."
@@ -13,5 +13,5 @@ if not exist "%EDITOR%" (
 	exit /b 1
 )
 
-start "" "%EDITOR%" "%UPROJECT%" /Engine/Maps/Entry?game=/Script/UnpaidOvertime.UOGameMode -game -windowed -ResX=1600 -ResY=900 -log
+start "" "%EDITOR%" "%UPROJECT%" /Game/UO/Maps/Lvl_Office -game -windowed -ResX=1600 -ResY=900 -log %*
 endlocal

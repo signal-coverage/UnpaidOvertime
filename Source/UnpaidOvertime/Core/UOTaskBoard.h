@@ -28,6 +28,9 @@ struct FUOTaskBoard
 	/** Marks a sub-objective done, crediting the employee. Any claim is released. */
 	static bool Complete(TArray<FUOTaskInstance>& Tasks, int32 SubObjectiveId, int32 EmployeeId, float TimeSeconds);
 
+	/** Sabotage (corrupted file): a done sub-objective goes back to Open and is flagged. Returns who lost the credit. */
+	static int32 Uncomplete(TArray<FUOTaskInstance>& Tasks, int32 SubObjectiveId);
+
 	static int32 CountTotal(const TArray<FUOTaskInstance>& Tasks);
 	static int32 CountDone(const TArray<FUOTaskInstance>& Tasks);
 	static int32 CountCompletedBy(const TArray<FUOTaskInstance>& Tasks, int32 EmployeeId);

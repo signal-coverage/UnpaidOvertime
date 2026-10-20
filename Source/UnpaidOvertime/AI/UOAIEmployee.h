@@ -1,4 +1,4 @@
-// UNPAID: OVERTIME - AI-controlled coworker pawn (greybox body, name tag, carried item).
+// UNPAID: OVERTIME - AI-controlled coworker pawn (mannequin body, name tag, carried item).
 
 #pragma once
 
@@ -8,13 +8,15 @@
 #include "UOAIEmployee.generated.h"
 
 class UStaticMeshComponent;
-class UTextRenderComponent;
 class UMaterialInstanceDynamic;
+class USkeletalMesh;
 class UUOInteractionComponent;
+class UUOFootstepComponent;
 
 /**
- *  A coworker body: colored cylinder with a head, a "nose" showing where it faces,
- *  a floating name tag and a box when carrying an item. Behavior lives in AUOAIController.
+ *  A coworker body: the template mannequin (Manny or Quinn) driven by ABP_Unarmed from the movement
+ *  component's velocity, tinted per employee, with the carried item in hand. Name tags are drawn by the HUD.
+ *  Behavior lives in AUOAIController.
  */
 UCLASS()
 class AUOAIEmployee : public ACharacter
@@ -27,33 +29,31 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	/** Applies name tag text and body color */
-	void SetEmployeeLook(const FString& DisplayName, const FLinearColor& Color);
+	/** Body (Manny or Quinn) and outfit tint */
+	void SetEmployeeLook(const FString& DisplayName, const FLinearColor& Color, bool bUseQuinn);
 
 	UUOInteractionComponent* GetInteraction() const { return Interaction; }
 
 protected:
 
 	UPROPERTY(VisibleAnywhere, Category="Components")
-	TObjectPtr<UStaticMeshComponent> BodyMesh;
-
-	UPROPERTY(VisibleAnywhere, Category="Components")
-	TObjectPtr<UStaticMeshComponent> HeadMesh;
-
-	UPROPERTY(VisibleAnywhere, Category="Components")
-	TObjectPtr<UStaticMeshComponent> NoseMesh;
-
-	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UStaticMeshComponent> HeldItemMesh;
-
-	UPROPERTY(VisibleAnywhere, Category="Components")
-	TObjectPtr<UTextRenderComponent> NameTag;
 
 	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UUOInteractionComponent> Interaction;
 
+	/** Coworkers are audible: footsteps a bit softer than the player's */
+	UPROPERTY(VisibleAnywhere, Category="Components")
+	TObjectPtr<UUOFootstepComponent> Footsteps;
+
+	UPROPERTY()
+	TObjectPtr<USkeletalMesh> MannyMesh;
+
+	UPROPERTY()
+	TObjectPtr<USkeletalMesh> QuinnMesh;
+
 	UPROPERTY(Transient)
-	TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> HeldItemMaterial;
@@ -61,5 +61,4 @@ protected:
 	EUOItemType ShownItem = EUOItemType::None;
 
 	void UpdateHeldItem();
-	void FaceNameTagToCamera();
 };

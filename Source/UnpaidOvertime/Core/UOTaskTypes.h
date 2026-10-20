@@ -50,6 +50,10 @@ struct FUOSubObjective
 	UPROPERTY(BlueprintReadOnly, Category="Task")
 	float CompletedAtTime = -1.f;
 
+	/** A finished result was tampered with (corrupted file): open again, shown as "redo" */
+	UPROPERTY(BlueprintReadOnly, Category="Task")
+	bool bSabotaged = false;
+
 	bool IsDone() const { return State == EUOSubObjectiveState::Done; }
 };
 

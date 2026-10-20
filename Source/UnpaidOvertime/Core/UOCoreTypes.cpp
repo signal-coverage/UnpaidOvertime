@@ -66,6 +66,7 @@ FText UOText::GetPhaseName(EUODayPhase Phase)
 	case EUODayPhase::Shift:		return LOCTEXT("PhaseShift", "SHIFT");
 	case EUODayPhase::Overtime:		return LOCTEXT("PhaseOvertime", "OVERTIME");
 	case EUODayPhase::Evaluation:	return LOCTEXT("PhaseEvaluation", "EVALUATION");
+	case EUODayPhase::Meeting:		return LOCTEXT("PhaseMeeting", "EMERGENCY MEETING");
 	default:						return FText::GetEmpty();
 	}
 }

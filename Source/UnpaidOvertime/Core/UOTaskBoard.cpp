@@ -88,7 +88,24 @@ bool FUOTaskBoard::Complete(TArray<FUOTaskInstance>& Tasks, int32 SubObjectiveId
 	Sub->ClaimedBy = INDEX_NONE;
 	Sub->CompletedBy = EmployeeId;
 	Sub->CompletedAtTime = TimeSeconds;
+	Sub->bSabotaged = false;
 	return true;
+}
+
+int32 FUOTaskBoard::Uncomplete(TArray<FUOTaskInstance>& Tasks, int32 SubObjectiveId)
+{
+	FUOSubObjective* Sub = FindSubObjective(Tasks, SubObjectiveId);
+	if (!Sub || !Sub->IsDone())
+	{
+		return INDEX_NONE;
+	}
+	const int32 LostBy = Sub->CompletedBy;
+	Sub->State = EUOSubObjectiveState::Open;
+	Sub->CompletedBy = INDEX_NONE;
+	Sub->CompletedAtTime = -1.f;
+	Sub->ClaimedBy = INDEX_NONE;
+	Sub->bSabotaged = true;
+	return LostBy;
 }
 
 int32 FUOTaskBoard::CountTotal(const TArray<FUOTaskInstance>& Tasks)

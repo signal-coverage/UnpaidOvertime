@@ -30,7 +30,9 @@ enum class EUODayPhase : uint8
 	PreGame,
 	Shift,
 	Overtime,
-	Evaluation
+	Evaluation,
+	/** Emergency meeting called mid-shift (a body was found): the clock stops until it ends */
+	Meeting
 };
 
 /** Cooperative task archetypes */

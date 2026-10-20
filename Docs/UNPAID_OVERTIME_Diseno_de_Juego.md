@@ -1,8 +1,24 @@
 # UNPAID: OVERTIME — Documento de diseño de juego
 
-**Versión:** 0.4 (borrador para revisión) · **Motor:** Unreal Engine 5 (C++) · **Plataforma objetivo:** PC / Steam
+**Versión:** 0.6 (borrador para revisión) · **Motor:** Unreal Engine 5 (C++) · **Plataforma objetivo:** PC / Steam
 **Base:** `diseno_juego_oficina_steam.md` + las ideas y cambios que definiste para este proyecto.
 
+> **Qué cambió respecto a la v0.5 (reglas del asesino, M4):**
+> - **Un malo cada 3 empleados** (mínimo 1). Los malos se conocen entre sí; si quedan solo malos, **ganan juntos**.
+> - **No hay trabajo falso:** el malo hace tareas reales si quiere, y cuentan.
+> - **Calificación falsa** de 1 a 3 estrellas (nunca 0): con 1★ su defensa siempre se acepta (en público); con 3★ recibe un **escudo falso**.
+> - **Los escudos protegen de cualquier expulsión** (despido directo, recorte o reunión). El acusador nunca pierde escudos.
+> - **Reunión siempre:** 1 minuto de debate abierto y 15 segundos de votación con voto reasignable; empate por **piedra, papel o tijera**.
+> - **Muertes sin límite por día** (con tiempo de espera); cada una aumenta el riesgo de ser visto.
+>
+> **Qué cambió respecto a la v0.4 (decisiones tomadas al implementar el M3):**
+> - **Semanas de 6 días:** lunes a viernes + un **"fin de semana de horas extra"** con dificultad **hardcore** (solo ese día). El lunes siguiente vuelve a la curva normal.
+> - **Los escudos se acumulan hasta 2:** cada promoción suma uno; un despido directo consume uno.
+> - **Votación:** nadie se vota a sí mismo; un candidato único se abstiene. Desempate exacto definido (sección 4.3).
+> - **Días sobrevividos** = evaluaciones superadas.
+> - **Preguntas del jefe:** reglas de justicia concretas (sección 5).
+> - **La dificultad nunca se estanca:** es lo que termina forzando las salidas.
+>
 > **Qué cambió respecto a la v0.3:**
 > - Las **4 a 8 tareas son en total** (no por jugador) y son **cooperativas**: cada tarea se divide en **sub-objetivos** que reparten varios jugadores (por ejemplo, "Mantenimiento de impresoras" = 3 cartuchos para 3 impresoras).
 > - Las **estrellas** se calculan por **contribución individual** (sub-objetivos completados por cada uno), no por tareas propias.
@@ -129,7 +145,9 @@ Todo esto se elige **antes de empezar** y no cambia durante la partida:
 
 - **No hay un número fijo de días.** Los días siguen mientras haya más de un jugador en pie.
 - Cada día es un **nivel nuevo**, generado con la semilla, **más difícil** que el anterior.
-- Los días se **nombran** en ciclos de semana (Lunes, Martes…, Viernes y luego un **fin de semana de "horas extra"**), con un contador acumulado: *"Día 12 — Martes (Semana 3)"*.
+- Los días se **nombran** en semanas de **6 días**: Lunes a Viernes y luego un **"fin de semana de horas extra"**, con un contador acumulado: *"Día 14 — Martes (Semana 3)"*.
+- El **fin de semana de horas extra** es un día **hardcore**: más difícil de lo que le correspondería por su número (más trabajo por sub-objetivo, turno más corto, preguntas del jefe más difíciles y con menos tiempo). Afecta a todos por igual. El lunes siguiente vuelve a la curva normal según su número de día.
+- **La dificultad nunca se estanca:** aunque la cantidad de sub-objetivos llegue a su tope, sigue subiendo el trabajo requerido en relación con el turno. Así, tarde o temprano, alguien falla.
 
 **Ganar la partida:** queda **un solo jugador** (humano o IA). En **multijugador**, ahí termina la partida.
 
@@ -219,8 +237,8 @@ Los **sabotajes** pueden anular un sub-objetivo, lo que baja la contribución de
 ### 4.3 Votación de recorte: quién se va
 
 - Los **candidatos** son **solo los jugadores con 1 estrella visible** (*"seleccionables solo los de 1 estrella"*).
-- **Todos los jugadores vivos votan** a uno de los candidatos; **el más votado se va**.
-- **Empate:** cada candidato empatado responde una **pregunta del jefe**; se va quien **peor responda** (o el primero en fallar).
+- **Todos los jugadores vivos votan** a uno de los candidatos, **en público**; **el más votado se va**. **Nadie puede votarse a sí mismo**: si hay un solo candidato, ese candidato se abstiene.
+- **Empate:** cada candidato empatado responde una **pregunta del jefe**. Se van primero los que **fallan** (no responder a tiempo cuenta como fallo); entre los que fallan, se va **el que falló más rápido**. Si todos aciertan, se va **el más lento**. Un empate exacto se resuelve al azar con la semilla.
 - **Defensa opcional:** antes de votar, un candidato puede **responder una pregunta del jefe**. Si acierta, **ese día no es candidato**; si falla, **sigue como candidato**.
 - **Sin candidatos** (nadie sacó 1 estrella): **no hay recorte** ese día.
 - **Un solo recorte por día**, para que la partida no se vacíe de golpe.
@@ -232,7 +250,8 @@ Los **sabotajes** pueden anular un sub-objetivo, lo que baja la contribución de
 - Con **3 estrellas**, el jugador responde una **pregunta del jefe** (más difícil que las de defensa).
 - **Si acierta**: gana la **promoción**, que es un **escudo**: **anula un despido directo** (0 estrellas). El jugador se queda.
 - **Si falla**: no pierde nada.
-- **Un escudo a la vez** (a decidir si se acumulan).
+- **Los escudos se acumulan hasta un máximo de 2:** cada promoción ganada suma uno, y se puede intentar la promoción aunque ya se tenga uno. Con 2 escudos no se ofrece promoción.
+- **Un escudo protege de cualquier expulsión:** despido directo, votación de recorte o votación de la reunión. Cada vez que salva a alguien **se consume uno**. Si el más votado del recorte tiene escudo, ese día no sale nadie.
 - **No sirve contra la votación de recorte ni contra una condena** (por ahora; es una decisión abierta).
 
 ### 4.5 Quién se va si el sistema no decide
@@ -262,28 +281,42 @@ Se **generan a partir del estado real del nivel**, para que sean justas:
 
 **Reglas:** opciones múltiples (3 a 4), tiempo límite, y **la pregunta nunca depende de algo que el jugador no podía haber visto** (el generador lo valida). Sube la **dificultad** con los días.
 
+**Reglas de justicia (implementadas en el M3):**
+- Las preguntas sobre **la oficina** solo se hacen sobre **salas en las que el empleado entró**.
+- Las preguntas sobre **lo que pasó en el día** solo cubren hechos ocurridos en una sala **mientras el empleado estaba ahí**, y nunca sus propias acciones. Excepción: *"¿Dónde se terminó el primer trabajo?"* puede incluir la acción propia.
+- Si una pregunta es ambigua se le agrega la hora; si sigue ambigua, se descarta.
+- Sin hechos presenciados, la promoción usa preguntas difíciles sobre la oficina.
+- Las IAs responden con la **misma regla**: solo "saben" lo que pudieron ver.
+
+**Curva de las preguntas:**
+
+| Tipo | Opciones | Tiempo |
+|---|---|---|
+| Defensa / desempate | 3 hasta el día 3, luego 4 | 16 s, −0,6 s por día, mínimo 8 s |
+| Promoción | 4 | 13 s, −0,5 s por día, mínimo 7 s |
+
 ---
 
 ## 6. El asesino y la investigación
 
 ### 6.1 Reglas del rol
 
-- **Uno solo por partida**, asignado al azar y en secreto (humano **o IA**).
-- Tiene **tareas falsas**: parece que las hace, pero **no cuentan** y **no dejan los mismos rastros**.
-- Muestra una **calificación falsa** visible para los demás.
-- **No puede recibir despido directo** (0 estrellas). **Sí puede ser despedido, pero solo si lo condenan por votación** (recorte o acusación formal).
-- Su meta: **ser el último en pie**.
+- **Un malo cada 3 empleados** (cantidad de empleados ÷ 3, redondeado hacia abajo, mínimo 1): con 4 a 5 empleados hay 1; con 6 a 8, 2. Se asignan al azar y en secreto (humanos **o IAs**).
+- **Los malos se conocen entre sí** (se ven marcados) y no pueden sabotearse ni matarse entre ellos.
+- **No hay trabajo falso:** el malo puede resolver tareas reales si quiere, para ayudar o para ganar credibilidad, y cuentan como las de cualquiera. Los rastros en su contra salen de sus **sabotajes y muertes**.
+- Muestra una **calificación falsa** visible para los demás (sección 6.2).
+- **No puede recibir despido directo** (0 estrellas). **Sí puede ser expulsado, pero solo por votación** en la reunión.
+- **Si quedan solo malos, los malos ganan juntos** y termina la partida.
 
 ### 6.2 La calificación falsa
 
-Al cierre del día, **los demás ven las estrellas que "sacó" el asesino**. Él **elige** entre las que su ficha permite.
+Al cierre del día, **los demás ven las estrellas que elige el malo: de 1 a 3, nunca 0**. Sus estrellas reales quedan ocultas.
 
-| Límite | Para qué sirve |
+| Muestra | Qué pasa |
 |---|---|
-| Solo valores **plausibles** según los rastros que dejó. | Que la mentira **pueda detectarse**. |
-| **Pocos "retoques"** por partida. | No es una herramienta ilimitada. |
-| Si muestra **1 estrella**, **es candidato** al recorte. | Una **decisión táctica**: parecer débil o arriesgarse. |
-| Su rastro real **no coincide** con lo mostrado. | La **inconsistencia** es la pista clave. |
+| **1★** | Responde obligatoriamente la **pregunta de defensa**, y **siempre se acepta como correcta**, aunque esté mal. Nunca es candidato al recorte. La pregunta y su respuesta se ven **en público**: quien sepa la respuesta real puede sospechar, y quien no la sepa puede tomarla por cierta y después ver la oficina "distinta", como una anomalía. |
+| **2★** | Nada especial. |
+| **3★** | Responde la **pregunta de promoción** (también siempre aceptada, en público) y recibe un **escudo falso**: los demás lo ven como uno real, pero **no lo protege nunca**. |
 
 ### 6.3 Sabotaje, rastros y acusación formal
 
@@ -299,17 +332,19 @@ Al cierre del día, **los demás ven las estrellas que "sacó" el asesino**. Él
 
 **Los rastros** están en terminales consultables y sirven para **verificar coartadas**.
 
-**Acusación formal** (cómo se condena al asesino aunque muestre 3 estrellas):
-- Cualquier jugador vivo puede pedirla en la **reunión del día** (una por día).
-- Exige **3 pruebas** adjuntas de los rastros.
-- **Todos votan.** Si hay **mayoría**, el acusado **se va**.
-- Si el acusado era el **asesino**, el acusador gana una **promoción** (escudo).
-- Si era **inocente**, el acusador **pierde su escudo** (si lo tenía) y el grupo pierde un jugador.
+**Reunión** (cómo se expulsa al malo aunque muestre 3 estrellas):
+- Hay reunión **todos los días** después del recorte, **salvo que queden solo malos** (ahí ganan los malos). También hay **reunión de emergencia** tras cada muerte.
+- **Debate abierto: 1 minuto** con cronómetro a la vista. En multijugador es por micrófono, con una tecla para **silenciarse** (mucha gente usa Discord). En solitario, las IAs dicen sus sospechas por texto. Cualquiera puede **mostrar a todos** hasta 3 de sus pruebas marcadas.
+- **Votación: 15 segundos.** Cada jugador tiene **un voto** a cualquier otro jugador vivo y puede **reasignarlo** mientras dure el tiempo, o **abstenerse**. Los votos se ven en público. El voto del más votado se muestra, pero no cuenta. Al terminar el tiempo, **se va el más votado** (como máximo uno por reunión).
+- **Salvarse:** el expulsado se salva si tiene un **escudo real** (se consume), o si **acierta la pregunta del jefe**; en ese caso queda **a prueba** y en la siguiente evaluación debe sacar **2★ o más**, o lo despiden. Para el malo, esta pregunta se evalúa de verdad y el escudo falso no sirve.
+- **Empate:** **piedra, papel o tijera** al mejor de 3; el que pierde es expulsado (y puede intentar salvarse igual). Entre dos buenos o dos malos el duelo es limpio. **Entre un bueno y un malo, el malo siempre gana:** el sistema mira la elección del bueno antes de revelarlas y le asigna al malo la opción ganadora.
+- **El rol solo se revela si alguien es expulsado.**
+- **Nadie pierde escudos por votar o acusar.**
 
 ### 6.4 Opción: el asesino puede matar (configurable)
 
 Si el anfitrión lo activa, el asesino puede **"desvincular" directamente** a un jugador:
-- Con **enfriamiento**, **máximo 1 por día** y con **pocos testigos cerca**.
+- Con **enfriamiento** entre muertes (ajustable), **sin límite por día** y **sin testigos cerca**. Cada muerte aumenta la posibilidad de que lo vean y lo expulsen.
 - Aparece un **cuerpo** con una **carta de despido** (gore suave) y se activa una **reunión de emergencia**.
 - **Acelera la reducción del grupo**, lo que cambia la duración y el equilibrio.
 
@@ -351,7 +386,7 @@ Gana **un jugador: el último que queda en pie**, sea **bueno o malo**.
 ### 7.3 Qué pasa en solitario
 
 - Tu IA **compite como cualquier otro empleado**.
-- **Si pierdes** (te despiden o te matan), la partida **termina para ti** y se **registra tu récord de días**. Puedes **seguir mirando** o **saltar** al resumen.
+- **Si pierdes** (te despiden o te matan), la partida **termina para ti** y se **registra tu récord de días**. Los **días sobrevividos** son las **evaluaciones superadas**: si te despiden al final del día N, sobreviviste N − 1; si ganas el día N, N. Puedes **seguir mirando** o **saltar** al resumen.
 - **Si ganas**, empieza una **nueva sucursal** (modo "racha") con IAs más difíciles.
 
 ### 7.4 Espectadores (despedidos y muertos)
@@ -586,9 +621,9 @@ Esfuerzos orientativos (S/M/L).
 |---|---|---|---|
 | 1 | ~~"4 a 8 tareas": por jugador o en total~~ | **Resuelto (v0.4):** en total, cooperativas, con sub-objetivos y estrellas por contribución. | — |
 | 2 | **Modo racha** | Activo en solitario; opcional en grupo. | Solo en solitario. |
-| 3 | **Escudo de promoción** | Solo contra el **despido directo**, de **un uso**. | También contra el **recorte**; acumulable. |
-| 4 | **Votos del recorte** | **Públicos**. | **Anónimos** (menos rencor). |
-| 5 | **Defensa con pregunta del jefe** | Sí, antes de votar. | No (solo votación). |
+| 3 | ~~Escudo de promoción~~ | **Resuelto (v0.5):** solo contra el despido directo; **se acumulan hasta 2**, cada despido consume uno. | — |
+| 4 | ~~Votos del recorte~~ | **Resuelto (v0.5):** públicos, sin votarse a sí mismo. | — |
+| 5 | ~~Defensa con pregunta del jefe~~ | **Resuelto (v0.5):** sí, antes de votar. | — |
 | 6 | **Acusación formal** | Una por día, con **3 pruebas**. | Solo en la Junta final. |
 | 7 | **Asesino IA** | Sí, puede ser una IA. | Solo humano (si hay humanos suficientes). |
 | 8 | **Espectadores** | Canal de voz aparte; sin ver los roles. | Ver los roles; sin voz. |
@@ -662,6 +697,8 @@ Esfuerzos orientativos (S/M/L).
 | **0.2** | Equipo de 4 a 8; **días = jugadores**; 4 a 8 tareas por jugador, que **aumentan** con los días; **nombre de la empresa** elegido por el anfitrión; **estrellas, despidos, apelaciones y promoción como escudo**; jefe como sistema; asesino con calificación falsa y sabotaje; **gore suave**; plan de duración. |
 | **0.3** | **1 a 8 jugadores con IAs** hasta 4 como mínimo; nombre de la empresa **obligatorio y sin valor por defecto**; **días infinitos** (modo récord y "racha"); tareas **fijas (4 a 8) y solo más difíciles**; **un solo ganador**; **votación de recorte** entre los de 1 estrella (sin director de ritmo); el asesino **puede ser despedido solo por votación**; matar, final y otras reglas **configurables**; **espectadores en tercera persona** sin micrófono con los vivos; IAs que **suben de dificultad**; plan con **IAs y solitario primero**. |
 | **0.4** | **4 a 8 tareas en total**, cooperativas y divididas en **sub-objetivos**; **estrellas por contribución individual**; se acepta el ritmo sin director (si nadie sale, sube la dificultad) y la duración estimada. |
+| **0.6** | Reglas del asesino (M4): un malo cada 3 empleados que se conocen y ganan juntos; sin trabajo falso; calificación falsa 1–3★ con defensa siempre aceptada y escudo falso; escudos contra cualquier expulsión; reunión diaria con debate de 1 min, votación de 15 s reasignable y desempate con piedra, papel o tijera; muertes sin límite por día. |
+| **0.5** | Decisiones del M3: semanas de 6 días con **fin de semana hardcore**; **escudos acumulables (máximo 2)**; votos públicos sin auto-voto y desempate definido; días sobrevividos = evaluaciones superadas; reglas de justicia y curva de las preguntas del jefe; la dificultad nunca se estanca. |
 
 ---
 

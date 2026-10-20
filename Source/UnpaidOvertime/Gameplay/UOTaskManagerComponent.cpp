@@ -7,6 +7,12 @@
 #include "UOTaskBoard.h"
 #include "UOTaskGenerator.h"
 #include "UODayClock.h"
+#include "UOGameMode.h"
+#include "UORoleSystemComponent.h"
+#include "UOEvidenceSubsystem.h"
+#include "UOTerminal.h"
+#include "UOInvestigation.h"
+#include "UOKillerRules.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/World.h"
 #include "UnpaidOvertime.h"
@@ -99,6 +105,48 @@ FUOInteractionOption UUOTaskManagerComponent::QueryInteraction(const AUOPlayerSt
 
 	const EUOItemType Carried = Employee->GetCarriedItem();
 
+	// Terminals: read the log (cameras and props have nothing to read)
+	if (const AUOTerminal* Terminal = Cast<AUOTerminal>(Station))
+	{
+		EUOTraceDevice Device;
+		if (Terminal->GetDevice(Device))
+		{
+			Option.Kind = EUOInteractionKind::ReadTerminal;
+			Option.Prompt = FText::Format(LOCTEXT("PromptRead", "Read the {0}"), FUOTraceText::GetDeviceName(Device).ToLower());
+			Option.bAvailable = true;
+		}
+		else if (Terminal->GetTerminalKind() == EUOTerminalKind::SecurityCamera)
+		{
+			const AUOGameState* GameState = GetUOGameState();
+			Option.BlockedReason = Terminal->IsCameraOffline(GameState ? GameState->GetShiftElapsedSeconds() : 0.f)
+				? LOCTEXT("CameraOffline", "Camera offline") : LOCTEXT("CameraOnline", "Recording");
+		}
+		else
+		{
+			Option.BlockedReason = LOCTEXT("JustAPlant", "Just a plant. Probably.");
+		}
+		return Option;
+	}
+
+	// Sabotaged machines: anyone can clear a jam; a lock just has to be waited out
+	if (Station->IsJammed())
+	{
+		Option.Kind = EUOInteractionKind::FixJam;
+		Option.Prompt = LOCTEXT("PromptFixJam", "Clear the paper jam");
+		Option.HoldSeconds = FUOKillerTuning::JamFixSeconds;
+		Option.bAvailable = true;
+		return Option;
+	}
+	{
+		const AUOGameState* GameState = GetUOGameState();
+		if (GameState && Station->IsLocked(GameState->GetShiftElapsedSeconds()))
+		{
+			Option.BlockedReason = FText::Format(LOCTEXT("BlockedLocked", "Locked for maintenance — {0}s"),
+				FText::AsNumber(FMath::CeilToInt(Station->GetLockedUntil() - GameState->GetShiftElapsedSeconds())));
+			return Option;
+		}
+	}
+
 	// Item sources hand out one item at a time while it is still needed
 	if (Station->IsItemSource())
 	{
@@ -151,6 +199,7 @@ FUOInteractionOption UUOTaskManagerComponent::QueryInteraction(const AUOPlayerSt
 		Option.Kind = EUOInteractionKind::Work;
 	}
 
+	// Rule 3: the killers' work is real and counts like anyone's
 	Option.bAvailable = true;
 	return Option;
 }
@@ -227,9 +276,22 @@ bool UUOTaskManagerComponent::CompleteInteraction(AUOPlayerState* Employee, AUOI
 	switch (Option.Kind)
 	{
 	case EUOInteractionKind::PickUpItem:
+	{
 		Employee->SetCarriedItem(Option.Item);
 		LogEvidence(Employee, Station->GetStationId(), EUOEvidenceAction::PickedUpItem, Option.Item, INDEX_NONE);
+		if (UUOEvidenceSubsystem* Evidence = UUOEvidenceSubsystem::Get(this))
+		{
+			FUOTraceRecord Record;
+			Record.Device = EUOTraceDevice::Inventory;
+			Record.Kind = EUOTraceKind::ItemSignedOut;
+			Record.TrueActorId = Employee->GetEmployeeId();
+			Record.Room = Station->GetRoomId();
+			Record.StationId = Station->GetStationId();
+			Record.Subject = UOText::GetItemName(Option.Item).ToString();
+			Evidence->Record(Record);
+		}
 		return true;
+	}
 
 	case EUOInteractionKind::DeliverItem:
 		Employee->SetCarriedItem(EUOItemType::None);
@@ -238,6 +300,26 @@ bool UUOTaskManagerComponent::CompleteInteraction(AUOPlayerState* Employee, AUOI
 
 	case EUOInteractionKind::Work:
 		CompleteSubObjective(Employee, Station, Option.SubObjectiveId);
+		return true;
+
+	case EUOInteractionKind::FixJam:
+		Station->SetJammed(false);
+		if (UUOEvidenceSubsystem* Evidence = UUOEvidenceSubsystem::Get(this))
+		{
+			FUOTraceRecord Record;
+			Record.Device = EUOTraceDevice::PrinterLog;
+			Record.Kind = EUOTraceKind::PrinterJamCleared;
+			Record.TrueActorId = Employee->GetEmployeeId();
+			Record.Room = Station->GetRoomId();
+			Record.StationId = Station->GetStationId();
+			Record.Subject = Station->GetDisplayName().ToString();
+			Evidence->Record(Record);
+		}
+		UE_LOG(LogUnpaidOvertime, Log, TEXT("Jam fixed: %s cleared %s."), *Employee->GetDisplayName(), *Station->GetDisplayName().ToString());
+		return true;
+
+	case EUOInteractionKind::ReadTerminal:
+		// Reading is local (UI for humans, a timed read for AIs); nothing changes on the server
 		return true;
 
 	default:
@@ -370,8 +452,80 @@ void UUOTaskManagerComponent::CompleteSubObjective(AUOPlayerState* Employee, AUO
 	{
 		Employee->SetCompletedCount(FUOTaskBoard::CountCompletedBy(Tasks, Employee->GetEmployeeId()));
 		LogEvidence(Employee, Station->GetStationId(), EUOEvidenceAction::CompletedSubObjective, EUOItemType::None, SubObjectiveId);
+		RecordWorkTraces(Employee, Station, SubObjectiveId);
 		RefreshStationVisual(Station->GetStationId());
 	}
+}
+
+void UUOTaskManagerComponent::RecordFailedAttempt(AUOPlayerState* Employee, AUOInteractableStation* Station)
+{
+	if (!Employee || !Station || Station->IsTerminal())
+	{
+		return;
+	}
+	UUOEvidenceSubsystem* Evidence = UUOEvidenceSubsystem::Get(this);
+	const AUOGameMode* GameMode = Cast<AUOGameMode>(GetOwner());
+	if (!Evidence || !GameMode)
+	{
+		return;
+	}
+	FUOTraceRecord Record;
+	Record.TrueActorId = Employee->GetEmployeeId();
+	Record.Detail = FUOKillerTuning::GetTraceDetail(GameMode->GetDayNumber());
+	Record.Room = Station->GetRoomId();
+	Record.StationId = Station->GetStationId();
+	Record.Subject = Station->GetDisplayName().ToString();
+	switch (Station->GetStationType())
+	{
+	case EUOStationType::Printer:		Record.Device = EUOTraceDevice::PrinterLog; Record.Kind = EUOTraceKind::PrintNoOutput; break;
+	case EUOStationType::FilingCabinet:	Record.Device = EUOTraceDevice::FileHistory; Record.Kind = EUOTraceKind::FileNoChange; break;
+	case EUOStationType::CoffeeMaker:	Record.Device = EUOTraceDevice::Inventory; Record.Kind = EUOTraceKind::CoffeeNoChange; break;
+	default:							return;
+	}
+	Evidence->Record(Record);
+}
+
+void UUOTaskManagerComponent::RecordWorkTraces(const AUOPlayerState* Employee, const AUOInteractableStation* Station, int32 SubObjectiveId)
+{
+	UUOEvidenceSubsystem* Evidence = UUOEvidenceSubsystem::Get(this);
+	const AUOGameMode* GameMode = Cast<AUOGameMode>(GetOwner());
+	if (!Evidence || !Employee || !Station || !GameMode)
+	{
+		return;
+	}
+
+	// The public report
+	FUOTraceRecord Report;
+	Report.Device = EUOTraceDevice::ActivityBoard;
+	Report.Kind = EUOTraceKind::WorkReported;
+	Report.TrueActorId = Employee->GetEmployeeId();
+	Report.Room = Station->GetRoomId();
+	Report.StationId = Station->GetStationId();
+	Report.Subject = Station->GetDisplayName().ToString();
+	Evidence->Record(Report);
+
+	// The device's own line: real work leaves output
+	FUOTraceRecord Device = Report;
+	Device.Detail = EUOTraceDetail::Named;
+	switch (Station->GetStationType())
+	{
+	case EUOStationType::Printer:
+		Device.Device = EUOTraceDevice::PrinterLog;
+		Device.Kind = EUOTraceKind::PrintOk;
+		break;
+	case EUOStationType::FilingCabinet:
+		Device.Device = EUOTraceDevice::FileHistory;
+		Device.Kind = EUOTraceKind::FileSaved;
+		Device.ValueA = 100 + SubObjectiveId;
+		break;
+	case EUOStationType::CoffeeMaker:
+		Device.Device = EUOTraceDevice::Inventory;
+		Device.Kind = EUOTraceKind::CoffeeLogged;
+		break;
+	default:
+		return;
+	}
+	Evidence->Record(Device);
 }
 
 void UUOTaskManagerComponent::LogEvidence(const AUOPlayerState* Employee, FName StationId, EUOEvidenceAction Action, EUOItemType Item, int32 SubObjectiveId)
@@ -393,8 +547,10 @@ void UUOTaskManagerComponent::LogEvidence(const AUOPlayerState* Employee, FName 
 	Entry.SubObjectiveId = SubObjectiveId;
 	GameState->AddEvidence(Entry);
 
-	UE_LOG(LogUnpaidOvertime, Log, TEXT("[%s] %s action %d at %s (item %d, sub-objective %d)"),
-		*Entry.ClockTime, *Entry.EmployeeName, static_cast<int32>(Action), *StationId.ToString(), static_cast<int32>(Item), SubObjectiveId);
+	const TCHAR* ActionName = Action == EUOEvidenceAction::CompletedSubObjective ? TEXT("completed sub-objective")
+		: (Action == EUOEvidenceAction::PickedUpItem ? TEXT("picked up item") : TEXT("dropped item"));
+	UE_LOG(LogUnpaidOvertime, Log, TEXT("[%s] %s %s %d at %s (item %d)"),
+		*Entry.ClockTime, *Entry.EmployeeName, ActionName, SubObjectiveId, *StationId.ToString(), static_cast<int32>(Item));
 }
 
 void UUOTaskManagerComponent::RefreshStationVisual(FName StationId)

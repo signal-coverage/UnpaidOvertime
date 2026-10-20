@@ -7,6 +7,7 @@
 #include "UOCoreTypes.h"
 #include "UOTaskTypes.h"
 #include "UOEvidenceTypes.h"
+#include "UOEvaluationState.h"
 #include "UOGameState.generated.h"
 
 class AUOPlayerState;
@@ -45,8 +46,22 @@ public:
 	const TArray<TObjectPtr<AUOPlayerState>>& GetEmployees() const { return Employees; }
 	const TArray<FUOEvidenceEntry>& GetEvidenceLog() const { return EvidenceLog; }
 
+	/** Device logs readable at terminals (public: never says more than the device could know) */
+	const TArray<FUOTraceEntry>& GetTraceLog() const { return TraceLog; }
+	const FUOTraceEntry* FindTrace(int32 TraceId) const { return TraceLog.FindByPredicate([TraceId](const FUOTraceEntry& Entry) { return Entry.Id == TraceId; }); }
+
+	/** Public: roles revealed when someone was voted out at a meeting (employee id -> was a saboteur) */
+	bool IsRoleRevealed(int32 EmployeeId, bool& bOutKiller) const;
+	const TArray<int32>& GetRevealedKillers() const { return RevealedKillers; }
+
 	AUOPlayerState* FindEmployee(int32 EmployeeId) const;
 	int32 CountAliveEmployees() const;
+
+	/** End-of-day evaluation as shown on screen */
+	const FUOEvaluationState& GetEvaluation() const { return Evaluation; }
+
+	/** Display name of an employee, empty if unknown */
+	FString GetEmployeeName(int32 EmployeeId) const;
 
 	// ~ Server-side writers
 
@@ -66,6 +81,15 @@ public:
 
 	void AddEvidence(const FUOEvidenceEntry& Entry) { EvidenceLog.Add(Entry); }
 	void ClearEvidence() { EvidenceLog.Reset(); }
+
+	void AddTrace(const FUOTraceEntry& Entry) { TraceLog.Add(Entry); }
+	void ClearTraces() { TraceLog.Reset(); }
+	void RevealRole(int32 EmployeeId, bool bKiller);
+	void ClearRevealedRoles() { RevealedKillers.Reset(); RevealedEmployees.Reset(); }
+
+	/** Server: the evaluation director edits this and bumps the revision */
+	FUOEvaluationState& GetMutableEvaluation() { return Evaluation; }
+	void ClearEvaluation() { const int32 Revision = Evaluation.Revision + 1; Evaluation = FUOEvaluationState(); Evaluation.Revision = Revision; }
 
 protected:
 
@@ -102,4 +126,16 @@ protected:
 	/** Trace of completed sub-objectives and item pickups/drops */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="Evidence")
 	TArray<FUOEvidenceEntry> EvidenceLog;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Evaluation")
+	FUOEvaluationState Evaluation;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Evidence")
+	TArray<FUOTraceEntry> TraceLog;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Match")
+	TArray<int32> RevealedKillers;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Match")
+	TArray<int32> RevealedEmployees;
 };

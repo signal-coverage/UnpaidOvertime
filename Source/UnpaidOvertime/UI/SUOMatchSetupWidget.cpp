@@ -1,37 +1,40 @@
 // UNPAID: OVERTIME - pre-match setup screen.
 
 #include "SUOMatchSetupWidget.h"
-#include "Styling/CoreStyle.h"
+#include "UOKillerRules.h"
+#include "UOUIStyle.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SOverlay.h"
-#include "Widgets/Layout/SBorder.h"
-#include "Widgets/Layout/SBox.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 
 #define LOCTEXT_NAMESPACE "UOMatchSetup"
 
-namespace UOMatchSetupPrivate
-{
-	const FLinearColor Accent(1.f, 0.72f, 0.2f);
-	const FLinearColor SelectedButton(0.95f, 0.6f, 0.12f);
-	const FLinearColor NormalButton(0.22f, 0.24f, 0.3f);
-	const FLinearColor ErrorColor(1.f, 0.35f, 0.3f);
-	const FLinearColor OkColor(0.4f, 0.9f, 0.45f);
-	const FLinearColor HintColor(0.7f, 0.7f, 0.75f);
-
-	FSlateFontInfo Font(const ANSICHAR* Typeface, float Size)
-	{
-		return FCoreStyle::GetDefaultFontStyle(Typeface, Size);
-	}
-}
-
 void SUOMatchSetupWidget::Construct(const FArguments& InArgs)
 {
-	using namespace UOMatchSetupPrivate;
-
 	OnCreateCompany = InArgs._OnCreateCompany;
+	OnBack = InArgs._OnBack;
+
+	const FUOUIStyle& Style = FUOUIStyle::Get();
+
+	auto Choices = [](TArray<TSharedRef<SWidget>> Buttons)
+	{
+		TSharedRef<SHorizontalBox> Row = SNew(SHorizontalBox);
+		for (int32 Index = 0; Index < Buttons.Num(); ++Index)
+		{
+			Row->AddSlot()
+			.FillWidth(1.f)
+			.Padding(Index == 0 ? 0.f : 8.f, 0.f, 0.f, 0.f)
+			[
+				Buttons[Index]
+			];
+		}
+		return Row;
+	};
 
 	ChildSlot
 	[
@@ -39,8 +42,9 @@ void SUOMatchSetupWidget::Construct(const FArguments& InArgs)
 
 		+ SOverlay::Slot()
 		[
-			SNew(SBorder)
-			.BorderImage(&BackdropBrush)
+			SNew(SImage)
+			.Image(&Style.WhiteBrush)
+			.ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.55f))
 		]
 
 		+ SOverlay::Slot()
@@ -48,50 +52,180 @@ void SUOMatchSetupWidget::Construct(const FArguments& InArgs)
 		.VAlign(VAlign_Center)
 		[
 			SNew(SBox)
-			.WidthOverride(620.f)
+			.WidthOverride(640.f)
 			[
 				SNew(SBorder)
-				.BorderImage(&PanelBrush)
-				.Padding(FMargin(36.f, 28.f))
+				.BorderImage(&Style.PanelSolidBrush)
+				.Padding(FMargin(44.f, 38.f))
 				[
 					SNew(SVerticalBox)
 
-					// Title
+					// Header
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
 						SNew(STextBlock)
-						.Text(LOCTEXT("Title", "UNPAID: OVERTIME"))
-						.Font(Font("Bold", 34))
-						.ColorAndOpacity(Accent)
+						.Text(LOCTEXT("Kicker", "STEP 1 OF 1  ·  ONBOARDING"))
+						.Font(FUOUIStyle::Label(10.f))
+						.ColorAndOpacity(FUOUIStyle::AccentBright())
 					]
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
-					.Padding(0.f, 2.f, 0.f, 18.f)
+					.Padding(0.f, 6.f, 0.f, 4.f)
 					[
 						SNew(STextBlock)
-						.Text(LOCTEXT("Subtitle", "Register your company. HR insists."))
-						.Font(Font("Italic", 13))
-						.ColorAndOpacity(HintColor)
+						.Text(LOCTEXT("Title", "REGISTER YOUR COMPANY"))
+						.Font(FUOUIStyle::Heading(28.f))
+						.ColorAndOpacity(FLinearColor::White)
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 28.f)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("Subtitle", "HR needs a few details before anyone is allowed to clock in."))
+						.Font(FUOUIStyle::Body(14.f))
+						.ColorAndOpacity(FUOUIStyle::TextDim())
 					]
 
 					// Company name
 					+ SVerticalBox::Slot()
 					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 8.f)
 					[
-						MakeSectionLabel(LOCTEXT("CompanyNameLabel", "Company name (required)"))
+						FUOUIStyle::MakeSectionLabel(LOCTEXT("CompanyNameLabel", "Company name (required)"))
 					]
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
-					.Padding(0.f, 4.f)
 					[
 						SAssignNew(NameBox, SEditableTextBox)
-						.Font(Font("Regular", 16))
-						.HintText(FText::Format(LOCTEXT("CompanyNameHint", "Up to {0} characters"), FText::AsNumber(FUOMatchConfig::MaxCompanyNameLength)))
+						.Style(&Style.TextBoxStyle)
+						.HintText(FText::Format(LOCTEXT("CompanyNameHint", "e.g. Synergy Dynamics — up to {0} characters"), FText::AsNumber(FUOMatchConfig::MaxCompanyNameLength)))
 						.OnTextChanged(this, &SUOMatchSetupWidget::HandleNameChanged)
 						.OnTextCommitted(this, &SUOMatchSetupWidget::HandleNameCommitted)
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 8.f, 0.f, 24.f)
+					[
+						SNew(STextBlock)
+						.Text(this, &SUOMatchSetupWidget::GetValidationText)
+						.ColorAndOpacity(this, &SUOMatchSetupWidget::GetValidationColor)
+						.Font(FUOUIStyle::Body(12.f))
+						.AutoWrapText(true)
+					]
+
+					// Tasks per day
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 8.f)
+					[
+						FUOUIStyle::MakeSectionLabel(LOCTEXT("TasksLabel", "Tasks per day — shared by the whole team"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 22.f)
+					[
+						MakeTaskStepper()
+					]
+
+					// Day length
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 8.f)
+					[
+						FUOUIStyle::MakeSectionLabel(LOCTEXT("DayLengthLabel", "Day length"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 22.f)
+					[
+						Choices({
+							FUOUIStyle::MakeChoice(UOText::GetDayLengthName(EUODayLength::Short),
+								[this]() { return Config.DayLength == EUODayLength::Short; }, [this]() { Config.DayLength = EUODayLength::Short; }),
+							FUOUIStyle::MakeChoice(UOText::GetDayLengthName(EUODayLength::Normal),
+								[this]() { return Config.DayLength == EUODayLength::Normal; }, [this]() { Config.DayLength = EUODayLength::Normal; }),
+							FUOUIStyle::MakeChoice(UOText::GetDayLengthName(EUODayLength::Long),
+								[this]() { return Config.DayLength == EUODayLength::Long; }, [this]() { Config.DayLength = EUODayLength::Long; })
+						})
+					]
+
+					// AI difficulty
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 8.f)
+					[
+						FUOUIStyle::MakeSectionLabel(LOCTEXT("DifficultyLabel", "Coworker competence"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 26.f)
+					[
+						Choices({
+							FUOUIStyle::MakeChoice(UOText::GetDifficultyName(EUOAIDifficulty::Easy),
+								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Easy; }, [this]() { Config.AIDifficulty = EUOAIDifficulty::Easy; }),
+							FUOUIStyle::MakeChoice(UOText::GetDifficultyName(EUOAIDifficulty::Medium),
+								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Medium; }, [this]() { Config.AIDifficulty = EUOAIDifficulty::Medium; }),
+							FUOUIStyle::MakeChoice(UOText::GetDifficultyName(EUOAIDifficulty::Hard),
+								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Hard; }, [this]() { Config.AIDifficulty = EUOAIDifficulty::Hard; })
+						})
+					]
+
+					// The saboteur (design doc 2.2 / 6)
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 8.f)
+					[
+						FUOUIStyle::MakeSectionLabel(LOCTEXT("KillerLabel", "The saboteur"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 10.f)
+					[
+						Choices({
+							FUOUIStyle::MakeChoice(LOCTEXT("KillerRandom", "Anyone (random)"),
+								[this]() { return Config.KillerAssignment == EUOKillerAssignment::Random; }, [this]() { Config.KillerAssignment = EUOKillerAssignment::Random; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("KillerAI", "Always an AI"),
+								[this]() { return Config.KillerAssignment == EUOKillerAssignment::AlwaysAI; }, [this]() { Config.KillerAssignment = EUOKillerAssignment::AlwaysAI; })
+#if !UE_BUILD_SHIPPING
+							, FUOUIStyle::MakeChoice(LOCTEXT("KillerMe", "Always me (debug)"),
+								[this]() { return Config.KillerAssignment == EUOKillerAssignment::AlwaysHuman; }, [this]() { Config.KillerAssignment = EUOKillerAssignment::AlwaysHuman; })
+#endif
+						})
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 26.f)
+					[
+						Choices({
+							FUOUIStyle::MakeChoice(LOCTEXT("NoKill", "Saboteur cannot dismiss"),
+								[this]() { return !Config.bKillerCanKill; }, [this]() { Config.bKillerCanKill = false; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("Kill", "Saboteurs can dismiss (cooldown)"),
+								[this]() { return Config.bKillerCanKill; }, [this]() { Config.bKillerCanKill = true; })
+						})
+					]
+
+					// Team size: killers = floor(size / 3)
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 14.f)
+					[
+						Choices({
+							FUOUIStyle::MakeChoice(LOCTEXT("Team4", "4 employees"), [this]() { return Config.TeamSize == 4; }, [this]() { Config.TeamSize = 4; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("Team5", "5"), [this]() { return Config.TeamSize == 5; }, [this]() { Config.TeamSize = 5; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("Team6", "6"), [this]() { return Config.TeamSize == 6; }, [this]() { Config.TeamSize = 6; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("Team7", "7"), [this]() { return Config.TeamSize == 7; }, [this]() { Config.TeamSize = 7; }),
+							FUOUIStyle::MakeChoice(LOCTEXT("Team8", "8"), [this]() { return Config.TeamSize == 8; }, [this]() { Config.TeamSize = 8; })
+						})
 					]
 
 					+ SVerticalBox::Slot()
@@ -99,158 +233,52 @@ void SUOMatchSetupWidget::Construct(const FArguments& InArgs)
 					.Padding(0.f, 0.f, 0.f, 14.f)
 					[
 						SNew(STextBlock)
-						.Text(this, &SUOMatchSetupWidget::GetValidationText)
-						.ColorAndOpacity(this, &SUOMatchSetupWidget::GetValidationColor)
-						.Font(Font("Regular", 11))
-						.AutoWrapText(true)
+						.Text_Lambda([this]()
+						{
+							const int32 Killers = FUOKillerTuning::GetKillerCount(Config.GetTotalEmployees());
+							return FText::Format(LOCTEXT("TeamSummary", "Team: {0} human + {1} AI coworkers. {2} of you {2}|plural(one=is a saboteur,other=are saboteurs)."),
+								FText::AsNumber(Config.HumanPlayers), FText::AsNumber(Config.GetAIPlayers()), FText::AsNumber(Killers));
+						})
+						.Font(FUOUIStyle::Body(12.f))
+						.ColorAndOpacity(FUOUIStyle::TextDim())
 					]
 
-					// Tasks per day
 					+ SVerticalBox::Slot()
 					.AutoHeight()
+					.Padding(0.f, 0.f, 0.f, 22.f)
 					[
-						MakeSectionLabel(LOCTEXT("TasksLabel", "Tasks per day (total, shared by everyone)"))
+						FUOUIStyle::MakeDivider()
 					]
 
+					// Footer: team summary, Back, Create
 					+ SVerticalBox::Slot()
 					.AutoHeight()
-					.Padding(0.f, 4.f, 0.f, 14.f)
 					[
 						SNew(SHorizontalBox)
 
 						+ SHorizontalBox::Slot()
-						.AutoWidth()
+						.FillWidth(1.f)
 						[
-							MakeStepButton(LOCTEXT("TasksMinus", "-"), -1)
+							SNullWidget::NullWidget
 						]
 
 						+ SHorizontalBox::Slot()
 						.AutoWidth()
-						.VAlign(VAlign_Center)
-						.Padding(16.f, 0.f)
+						.Padding(0.f, 0.f, 10.f, 0.f)
 						[
-							SNew(SBox)
-							.WidthOverride(40.f)
-							.HAlign(HAlign_Center)
-							[
-								SNew(STextBlock)
-								.Text_Lambda([this]() { return FText::AsNumber(Config.TasksPerDay); })
-								.Font(Font("Bold", 20))
-							]
+							FUOUIStyle::MakeButton(LOCTEXT("Back", "Back"), FOnClicked::CreateLambda([this]()
+							{
+								OnBack.ExecuteIfBound();
+								return FReply::Handled();
+							}), false)
 						]
 
 						+ SHorizontalBox::Slot()
 						.AutoWidth()
 						[
-							MakeStepButton(LOCTEXT("TasksPlus", "+"), 1)
-						]
-
-						+ SHorizontalBox::Slot()
-						.AutoWidth()
-						.VAlign(VAlign_Center)
-						.Padding(16.f, 0.f)
-						[
-							SNew(STextBlock)
-							.Text(FText::Format(LOCTEXT("TasksRange", "({0} to {1})"), FText::AsNumber(FUOMatchConfig::MinTasksPerDay), FText::AsNumber(FUOMatchConfig::MaxTasksPerDay)))
-							.ColorAndOpacity(HintColor)
-						]
-					]
-
-					// Day length
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						MakeSectionLabel(LOCTEXT("DayLengthLabel", "Day length"))
-					]
-
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(0.f, 4.f, 0.f, 14.f)
-					[
-						SNew(SHorizontalBox)
-
-						+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
-						[
-							MakeChoiceButton(UOText::GetDayLengthName(EUODayLength::Short),
-								[this]() { return Config.DayLength == EUODayLength::Short; },
-								[this]() { Config.DayLength = EUODayLength::Short; })
-						]
-
-						+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
-						[
-							MakeChoiceButton(UOText::GetDayLengthName(EUODayLength::Normal),
-								[this]() { return Config.DayLength == EUODayLength::Normal; },
-								[this]() { Config.DayLength = EUODayLength::Normal; })
-						]
-
-						+ SHorizontalBox::Slot().AutoWidth()
-						[
-							MakeChoiceButton(UOText::GetDayLengthName(EUODayLength::Long),
-								[this]() { return Config.DayLength == EUODayLength::Long; },
-								[this]() { Config.DayLength = EUODayLength::Long; })
-						]
-					]
-
-					// AI difficulty
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						MakeSectionLabel(LOCTEXT("DifficultyLabel", "AI coworker difficulty"))
-					]
-
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(0.f, 4.f, 0.f, 14.f)
-					[
-						SNew(SHorizontalBox)
-
-						+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
-						[
-							MakeChoiceButton(UOText::GetDifficultyName(EUOAIDifficulty::Easy),
-								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Easy; },
-								[this]() { Config.AIDifficulty = EUOAIDifficulty::Easy; })
-						]
-
-						+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
-						[
-							MakeChoiceButton(UOText::GetDifficultyName(EUOAIDifficulty::Medium),
-								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Medium; },
-								[this]() { Config.AIDifficulty = EUOAIDifficulty::Medium; })
-						]
-
-						+ SHorizontalBox::Slot().AutoWidth()
-						[
-							MakeChoiceButton(UOText::GetDifficultyName(EUOAIDifficulty::Hard),
-								[this]() { return Config.AIDifficulty == EUOAIDifficulty::Hard; },
-								[this]() { Config.AIDifficulty = EUOAIDifficulty::Hard; })
-						]
-					]
-
-					// Team summary
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(0.f, 0.f, 0.f, 20.f)
-					[
-						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("TeamSummary", "Team: {0} human + {1} AI coworkers. Seed: random."), FText::AsNumber(Config.HumanPlayers), FText::AsNumber(Config.GetAIPlayers())))
-						.ColorAndOpacity(HintColor)
-					]
-
-					// Create
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.HAlign(HAlign_Right)
-					[
-						SNew(SButton)
-						.IsEnabled(this, &SUOMatchSetupWidget::IsCreateEnabled)
-						.ButtonColorAndOpacity(SelectedButton)
-						.ContentPadding(FMargin(28.f, 10.f))
-						.OnClicked(this, &SUOMatchSetupWidget::HandleCreateClicked)
-						[
-							SNew(STextBlock)
-							.Text(LOCTEXT("CreateButton", "Create company and clock in"))
-							.Font(Font("Bold", 16))
-							.ColorAndOpacity(FLinearColor::Black)
+							FUOUIStyle::MakeButton(LOCTEXT("CreateButton", "Create company & clock in"),
+								FOnClicked::CreateSP(this, &SUOMatchSetupWidget::HandleCreateClicked), true,
+								TAttribute<bool>::CreateSP(this, &SUOMatchSetupWidget::IsCreateEnabled))
 						]
 					]
 				]
@@ -259,59 +287,126 @@ void SUOMatchSetupWidget::Construct(const FArguments& InArgs)
 	];
 }
 
+TSharedRef<SWidget> SUOMatchSetupWidget::MakeTaskStepper()
+{
+	auto Step = [this](int32 Delta, const FText& Label)
+	{
+		return SNew(SBox)
+			.WidthOverride(44.f)
+			.HeightOverride(40.f)
+			[
+				SNew(SButton)
+				.ButtonStyle(&FUOUIStyle::Get().ChoiceButton)
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				.Cursor(EMouseCursor::Hand)
+				.IsEnabled_Lambda([this, Delta]()
+				{
+					const int32 Next = Config.TasksPerDay + Delta;
+					return Next >= FUOMatchConfig::MinTasksPerDay && Next <= FUOMatchConfig::MaxTasksPerDay;
+				})
+				.OnClicked_Lambda([this, Delta]()
+				{
+					Config.TasksPerDay = FMath::Clamp(Config.TasksPerDay + Delta, FUOMatchConfig::MinTasksPerDay, FUOMatchConfig::MaxTasksPerDay);
+					return FReply::Handled();
+				})
+				[
+					SNew(STextBlock)
+					.Text(Label)
+					.Font(FUOUIStyle::Font("Bold", 18))
+				]
+			];
+	};
+
+	TSharedRef<SHorizontalBox> Pips = SNew(SHorizontalBox);
+	for (int32 Count = FUOMatchConfig::MinTasksPerDay; Count <= FUOMatchConfig::MaxTasksPerDay; ++Count)
+	{
+		Pips->AddSlot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(3.f, 0.f)
+		[
+			SNew(SBox)
+			.WidthOverride(14.f)
+			.HeightOverride(14.f)
+			[
+				SNew(SImage)
+				.Image(&FUOUIStyle::Get().DotBrush)
+				.ColorAndOpacity_Lambda([this, Count]()
+				{
+					return FSlateColor(Count <= Config.TasksPerDay ? FUOUIStyle::Accent() : FLinearColor(1.f, 1.f, 1.f, 0.1f));
+				})
+			]
+		];
+	}
+
+	return SNew(SHorizontalBox)
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		[
+			Step(-1, LOCTEXT("TasksMinus", "−"))
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(18.f, 0.f, 10.f, 0.f)
+		[
+			SNew(SBox)
+			.WidthOverride(34.f)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]() { return FText::AsNumber(Config.TasksPerDay); })
+				.Font(FUOUIStyle::Font("Bold", 26))
+				.Justification(ETextJustify::Center)
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(0.f, 0.f, 18.f, 0.f)
+		[
+			Pips
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		[
+			Step(1, LOCTEXT("TasksPlus", "+"))
+		]
+
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.f)
+		.HAlign(HAlign_Right)
+		.VAlign(VAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(FText::Format(LOCTEXT("TasksRange", "{0} to {1}"), FText::AsNumber(FUOMatchConfig::MinTasksPerDay), FText::AsNumber(FUOMatchConfig::MaxTasksPerDay)))
+			.Font(FUOUIStyle::Body(12.f))
+			.ColorAndOpacity(FUOUIStyle::TextDim())
+		];
+}
+
 TSharedPtr<SWidget> SUOMatchSetupWidget::GetInitialFocusTarget() const
 {
 	return NameBox;
 }
 
-TSharedRef<SWidget> SUOMatchSetupWidget::MakeSectionLabel(const FText& Label) const
+void SUOMatchSetupWidget::SetCompanyName(const FString& Name)
 {
-	return SNew(STextBlock)
-		.Text(Label)
-		.Font(UOMatchSetupPrivate::Font("Bold", 13))
-		.ColorAndOpacity(FLinearColor(0.9f, 0.9f, 0.95f));
+	if (NameBox.IsValid())
+	{
+		NameBox->SetText(FText::FromString(Name));
+	}
+	HandleNameChanged(FText::FromString(Name));
 }
 
-TSharedRef<SWidget> SUOMatchSetupWidget::MakeChoiceButton(const FText& Label, TFunction<bool()> IsSelected, TFunction<void()> OnSelect) const
+FUOConfigValidationResult SUOMatchSetupWidget::SubmitForAutomation()
 {
-	return SNew(SButton)
-		.ContentPadding(FMargin(18.f, 6.f))
-		.ButtonColorAndOpacity_Lambda([IsSelected]()
-		{
-			return FSlateColor(IsSelected() ? UOMatchSetupPrivate::SelectedButton : UOMatchSetupPrivate::NormalButton);
-		})
-		.OnClicked_Lambda([OnSelect]()
-		{
-			OnSelect();
-			return FReply::Handled();
-		})
-		[
-			SNew(STextBlock)
-			.Text(Label)
-			.Font(UOMatchSetupPrivate::Font("Bold", 13))
-			.ColorAndOpacity_Lambda([IsSelected]()
-			{
-				return FSlateColor(IsSelected() ? FLinearColor::Black : FLinearColor::White);
-			})
-		];
-}
-
-TSharedRef<SWidget> SUOMatchSetupWidget::MakeStepButton(const FText& Label, int32 Delta)
-{
-	return SNew(SButton)
-		.ContentPadding(FMargin(14.f, 4.f))
-		.ButtonColorAndOpacity(UOMatchSetupPrivate::NormalButton)
-		.IsEnabled_Lambda([this, Delta]()
-		{
-			const int32 Next = Config.TasksPerDay + Delta;
-			return Next >= FUOMatchConfig::MinTasksPerDay && Next <= FUOMatchConfig::MaxTasksPerDay;
-		})
-		.OnClicked(this, &SUOMatchSetupWidget::HandleTasksStep, Delta)
-		[
-			SNew(STextBlock)
-			.Text(Label)
-			.Font(UOMatchSetupPrivate::Font("Bold", 18))
-		];
+	HandleCreateClicked();
+	return Config.Validate();
 }
 
 void SUOMatchSetupWidget::HandleNameChanged(const FText& NewText)
@@ -344,7 +439,7 @@ FText SUOMatchSetupWidget::GetValidationText() const
 	}
 	if (!bNameTouched && Result.Error == EUOConfigError::CompanyNameEmpty)
 	{
-		return LOCTEXT("NameRequired", "Type a company name to enable Create.");
+		return LOCTEXT("NameRequired", "Type a company name to continue.");
 	}
 	return Result.GetMessage();
 }
@@ -353,15 +448,15 @@ FSlateColor SUOMatchSetupWidget::GetValidationColor() const
 {
 	if (!AuthorityError.IsEmpty())
 	{
-		return FSlateColor(UOMatchSetupPrivate::ErrorColor);
+		return FSlateColor(FUOUIStyle::Bad());
 	}
 
 	const FUOConfigValidationResult Result = Config.Validate();
 	if (Result.bIsValid)
 	{
-		return FSlateColor(UOMatchSetupPrivate::OkColor);
+		return FSlateColor(FUOUIStyle::Good());
 	}
-	return FSlateColor(bNameTouched ? UOMatchSetupPrivate::ErrorColor : UOMatchSetupPrivate::HintColor);
+	return FSlateColor(bNameTouched ? FUOUIStyle::Bad() : FUOUIStyle::TextDim());
 }
 
 bool SUOMatchSetupWidget::IsCreateEnabled() const
@@ -381,12 +476,6 @@ FReply SUOMatchSetupWidget::HandleCreateClicked()
 		const FUOConfigValidationResult Result = OnCreateCompany.Execute(Config);
 		AuthorityError = Result.bIsValid ? FText::GetEmpty() : Result.GetMessage();
 	}
-	return FReply::Handled();
-}
-
-FReply SUOMatchSetupWidget::HandleTasksStep(int32 Delta)
-{
-	Config.TasksPerDay = FMath::Clamp(Config.TasksPerDay + Delta, FUOMatchConfig::MinTasksPerDay, FUOMatchConfig::MaxTasksPerDay);
 	return FReply::Handled();
 }
 

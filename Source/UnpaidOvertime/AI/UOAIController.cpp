@@ -10,10 +10,15 @@
 #include "UOTaskManagerComponent.h"
 #include "UOTaskBoard.h"
 #include "UOTaskGenerator.h"
+#include "UORoleSystemComponent.h"
+#include "UOKillerRules.h"
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Navigation/PathFollowingComponent.h"
+#include "NavigationSystem.h"
+#include "UnpaidOvertime.h"
 
 namespace UOAIControllerPrivate
 {
@@ -27,7 +32,10 @@ namespace UOAIControllerPrivate
 	constexpr float PathProbeRadius = 30.f;
 	constexpr float RetryDelaySeconds = 0.6f;
 	constexpr float CompletePauseSeconds = 0.5f;
-	constexpr float BaseWalkSpeed = 320.f;
+	constexpr float BaseWalkSpeed = 240.f;
+
+	/** A navmesh move that ends farther than this from its goal (partial path) continues with steering */
+	constexpr float NavArrivalTolerance = 110.f;
 }
 
 AUOAIController::AUOAIController()
@@ -63,6 +71,7 @@ void AUOAIController::OnPossess(APawn* InPawn)
 	if (UUOInteractionComponent* Interaction = GetInteraction())
 	{
 		InteractionFinishedHandle = Interaction->OnInteractionFinished.AddUObject(this, &AUOAIController::HandleInteractionFinished);
+		SecondaryFinishedHandle = Interaction->OnSecondaryFinished.AddUObject(this, &AUOAIController::HandleSecondaryFinished);
 	}
 }
 
@@ -71,6 +80,7 @@ void AUOAIController::OnUnPossess()
 	if (UUOInteractionComponent* Interaction = GetInteraction())
 	{
 		Interaction->OnInteractionFinished.Remove(InteractionFinishedHandle);
+		Interaction->OnSecondaryFinished.Remove(SecondaryFinishedHandle);
 	}
 	Super::OnUnPossess();
 }
@@ -85,12 +95,8 @@ void AUOAIController::Tick(float DeltaSeconds)
 	{
 		if (State != EUOAIState::Idle)
 		{
-			if (UUOInteractionComponent* Interaction = GetInteraction())
-			{
-				Interaction->ClearTarget();
-			}
-			Waypoints.Reset();
-			State = EUOAIState::Idle;
+			// Day over or an emergency meeting: drop everything (claims too, so nothing stays reserved)
+			ReleaseEverything();
 		}
 		return;
 	}
@@ -106,6 +112,26 @@ void AUOAIController::Tick(float DeltaSeconds)
 
 	StateTimer -= DeltaSeconds;
 
+	// A killer on its way to work drops it when a sabotage (or dismissal) window opens
+	if (bIsKiller && (State == EUOAIState::GoToStation || State == EUOAIState::GoToItemSource || State == EUOAIState::Claim))
+	{
+		KillerInterruptTimer -= DeltaSeconds;
+		if (KillerInterruptTimer <= 0.f)
+		{
+			KillerInterruptTimer = 2.f;
+			const UUORoleSystemComponent* Roles = GetRoleSystem();
+			const int32 MyId = GetEmployee() ? GetEmployee()->GetEmployeeId() : INDEX_NONE;
+			const float Now = GameState->GetShiftElapsedSeconds();
+			const bool bKillWindow = Roles && Roles->IsKillEnabled() && Now >= NextKillAt && Now >= Roles->GetKillerState(MyId).KillReadyAt;
+			if (Roles && Roles->IsKillerActive(MyId) && (Now >= NextSabotageAt || bKillWindow))
+			{
+				AbandonCurrentWork();
+				ChooseActivity();
+				return;
+			}
+		}
+	}
+
 	switch (State)
 	{
 	case EUOAIState::Idle:
@@ -115,7 +141,7 @@ void AUOAIController::Tick(float DeltaSeconds)
 	case EUOAIState::Think:
 		if (StateTimer <= 0.f)
 		{
-			EnterState(EUOAIState::Claim);
+			ChooseActivity();
 		}
 		break;
 
@@ -144,6 +170,21 @@ void AUOAIController::Tick(float DeltaSeconds)
 		{
 			EnterState(EUOAIState::Idle);
 		}
+		break;
+
+	case EUOAIState::GoToTerminal:
+	case EUOAIState::ReadTerminal:
+		TickTerminal(DeltaSeconds);
+		break;
+
+	case EUOAIState::GoToSabotage:
+	case EUOAIState::Sabotage:
+		TickSabotage(DeltaSeconds);
+		break;
+
+	case EUOAIState::StalkVictim:
+	case EUOAIState::Kill:
+		TickStalk(DeltaSeconds);
 		break;
 	}
 }
@@ -174,7 +215,7 @@ void AUOAIController::EnterState(EUOAIState NewState)
 		StateTimer = 2.f;
 		if (AUOInteractableStation* Source = ItemSourceStation.Get())
 		{
-			FaceLocation(Source->GetActorLocation());
+			FaceLocation(Source->GetFocusLocation());
 			StartInteractionWith(Source);
 		}
 		break;
@@ -194,7 +235,7 @@ void AUOAIController::EnterState(EUOAIState NewState)
 		StateTimer = WorkSeconds / FMath::Max(0.1f, Difficulty.WorkSpeedMultiplier) * 6.f + 5.f;
 		if (AUOInteractableStation* Station = TargetStation.Get())
 		{
-			FaceLocation(Station->GetActorLocation());
+			FaceLocation(Station->GetFocusLocation());
 			StartInteractionWith(Station);
 		}
 		break;
@@ -283,6 +324,12 @@ void AUOAIController::TickWork(float DeltaSeconds)
 		switch (LastInteractionResult)
 		{
 		case EUOInteractionResult::Succeeded:
+			// Cleared a paper jam on the way: our sub-objective is still ours and still open, keep working
+			if (IsClaimStillValid())
+			{
+				StartInteractionWith(TargetStation.Get());
+				return;
+			}
 			EnterState(EUOAIState::Complete);
 			return;
 
@@ -326,6 +373,7 @@ bool AUOAIController::ChooseAndClaim()
 
 	const FVector MyLocation = MyPawn->GetActorLocation();
 	const EUOItemType Carried = Employee->GetCarriedItem();
+	const float Now = GameState->GetShiftElapsedSeconds();
 
 	const FUOSubObjective* Best = nullptr;
 	float BestScore = TNumericLimits<float>::Max();
@@ -341,7 +389,8 @@ bool AUOAIController::ChooseAndClaim()
 			}
 
 			const AUOInteractableStation* Station = TaskManager->FindStation(Sub.StationId);
-			if (!Station)
+			// A locked station is visible to everyone: skip it until it opens
+			if (!Station || Station->IsLocked(Now))
 			{
 				continue;
 			}
@@ -368,7 +417,6 @@ bool AUOAIController::ChooseAndClaim()
 				Score -= 5000.f;
 			}
 			Score += Rng.FRandRange(0.f, 600.f);
-
 			if (Score < BestScore)
 			{
 				BestScore = Score;
@@ -404,6 +452,27 @@ bool AUOAIController::ChooseAndClaim()
 	return TargetStation.IsValid();
 }
 
+void AUOAIController::ResetForNewDay()
+{
+	if (UUOInteractionComponent* Interaction = GetInteraction())
+	{
+		Interaction->ClearTarget();
+	}
+	ResetKnowledge();
+	ClaimedSubObjectiveId = INDEX_NONE;
+	TargetStation.Reset();
+	ItemSourceStation.Reset();
+	Waypoints.Reset();
+	StopMovement();
+	NavMoveState = ENavMoveState::None;
+	NavFallbackCount = 0;
+	StuckTimer = 0.f;
+	StuckCount = 0;
+	RetryTimer = 0.f;
+	bHasInteractionResult = false;
+	EnterState(EUOAIState::Idle);
+}
+
 void AUOAIController::AbandonCurrentWork()
 {
 	if (UUOInteractionComponent* Interaction = GetInteraction())
@@ -422,7 +491,12 @@ void AUOAIController::AbandonCurrentWork()
 	ClaimedSubObjectiveId = INDEX_NONE;
 	TargetStation.Reset();
 	ItemSourceStation.Reset();
+	TargetTerminal.Reset();
+	SabotageTarget.Reset();
+	KillVictim.Reset();
 	Waypoints.Reset();
+	StopMovement();
+	NavMoveState = ENavMoveState::None;
 	RetryTimer = 0.f;
 	EnterState(EUOAIState::Idle);
 }
@@ -466,10 +540,61 @@ void AUOAIController::HandleInteractionFinished(AUOInteractableStation* Station,
 
 void AUOAIController::MoveToPoint(const FVector& Target)
 {
+	using namespace UOAIControllerPrivate;
+
+	Waypoints.Reset();
+	MoveGoal = Target;
+	NavMoveState = ENavMoveState::None;
+
+	// Navmesh first: path following handles corridors, doors and furniture
+	if (FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+	{
+		FAIMoveRequest Request(Target);
+		Request.SetAcceptanceRadius(FinalAcceptanceRadius);
+		Request.SetUsePathfinding(true);
+		Request.SetAllowPartialPath(true);
+		Request.SetProjectGoalLocation(true);
+		Request.SetReachTestIncludesAgentRadius(false);
+		Request.SetCanStrafe(false);
+
+		const FPathFollowingRequestResult Result = MoveTo(Request);
+		if (Result.Code == EPathFollowingRequestResult::RequestSuccessful)
+		{
+			NavMoveState = ENavMoveState::Moving;
+			return;
+		}
+		if (Result.Code == EPathFollowingRequestResult::AlreadyAtGoal)
+		{
+			NavMoveState = ENavMoveState::Succeeded;
+			return;
+		}
+	}
+
+	// No navmesh path: steer
+	if (NavFallbackCount++ % 10 == 0)
+	{
+		UE_LOG(LogUnpaidOvertime, Verbose, TEXT("%s: no navmesh path to %s, steering instead."), *GetNameSafe(GetPawn()), *Target.ToCompactString());
+	}
+	StartSteering(Target);
+}
+
+void AUOAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
+{
+	Super::OnMoveCompleted(RequestID, Result);
+
+	if (NavMoveState == ENavMoveState::Moving)
+	{
+		NavMoveState = Result.IsSuccess() ? ENavMoveState::Succeeded : ENavMoveState::Failed;
+	}
+}
+
+void AUOAIController::StartSteering(const FVector& Target)
+{
 	Waypoints.Reset();
 	StuckTimer = 0.f;
 	StuckCount = 0;
 	BestDistanceToWaypoint = TNumericLimits<float>::Max();
+	NavMoveState = ENavMoveState::None;
 
 	const APawn* MyPawn = GetPawn();
 	if (!MyPawn)
@@ -486,6 +611,39 @@ void AUOAIController::MoveToPoint(const FVector& Target)
 }
 
 AUOAIController::EMoveStatus AUOAIController::UpdateMovement(float DeltaSeconds)
+{
+	using namespace UOAIControllerPrivate;
+
+	const APawn* MyPawn = GetPawn();
+	if (!MyPawn)
+	{
+		return EMoveStatus::Failed;
+	}
+
+	switch (NavMoveState)
+	{
+	case ENavMoveState::Moving:
+		return EMoveStatus::Moving;
+
+	case ENavMoveState::Succeeded:
+	case ENavMoveState::Failed:
+	{
+		// Partial paths and blocked moves finish the last stretch by steering
+		NavMoveState = ENavMoveState::None;
+		if (FVector::Dist2D(MyPawn->GetActorLocation(), MoveGoal) <= NavArrivalTolerance)
+		{
+			return EMoveStatus::Arrived;
+		}
+		StartSteering(MoveGoal);
+		return EMoveStatus::Moving;
+	}
+
+	default:
+		return UpdateSteering(DeltaSeconds);
+	}
+}
+
+AUOAIController::EMoveStatus AUOAIController::UpdateSteering(float DeltaSeconds)
 {
 	using namespace UOAIControllerPrivate;
 

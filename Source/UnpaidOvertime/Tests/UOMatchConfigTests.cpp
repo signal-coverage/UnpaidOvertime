@@ -147,7 +147,21 @@ bool FUOMatchConfigPlayersTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Error is PlayerCountOutOfRange"), Result.Error, EUOConfigError::PlayerCountOutOfRange);
 
 	Config.HumanPlayers = 6;
-	TestEqual(TEXT("No AI needed above the minimum team size"), Config.GetAIPlayers(), 0);
+	TestEqual(TEXT("No AI needed above the team size"), Config.GetAIPlayers(), 0);
+
+	// Team size (M4.1: 4-8 employees, killers = floor(size / 3))
+	FUOMatchConfig Team = UOMatchConfigTests::MakeValidConfig();
+	TestEqual(TEXT("Default team size is 4"), Team.TeamSize, 4);
+	Team.TeamSize = 6;
+	TestEqual(TEXT("6 employees: 5 AIs with one human"), Team.GetAIPlayers(), 5);
+	TestEqual(TEXT("6 employees"), Team.GetTotalEmployees(), 6);
+	TestTrue(TEXT("6 is valid"), Team.Validate().bIsValid);
+	Team.TeamSize = 8;
+	TestTrue(TEXT("8 is valid"), Team.Validate().bIsValid);
+	Team.TeamSize = 9;
+	TestEqual(TEXT("9 is too many"), Team.Validate().Error, EUOConfigError::PlayerCountOutOfRange);
+	Team.TeamSize = 3;
+	TestEqual(TEXT("3 is too few"), Team.Validate().Error, EUOConfigError::PlayerCountOutOfRange);
 	return true;
 }
 

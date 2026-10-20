@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UOCoreTypes.h"
+#include "UOKillerTypes.h"
 #include "UOInteractionTypes.generated.h"
 
 /** What an interaction at a station would do */
@@ -13,7 +14,15 @@ enum class EUOInteractionKind : uint8
 	None,
 	PickUpItem,
 	DeliverItem,
-	Work
+	Work,
+	/** Open a terminal's log (local UI for humans, a timed read for AIs) */
+	ReadTerminal,
+	/** Clear a jammed printer */
+	FixJam,
+	/** Killer only (F): sabotage the focused station or terminal */
+	Sabotage,
+	/** Killer only (F): dismiss the coworker in front (optional rule) */
+	Kill
 };
 
 /** Outcome of a finished hold/press */
@@ -59,8 +68,15 @@ struct FUOInteractionOption
 	UPROPERTY(BlueprintReadOnly, Category="Interaction")
 	EUOItemType Item = EUOItemType::None;
 
+	UPROPERTY(BlueprintReadOnly, Category="Interaction")
+	EUOSabotageType Sabotage = EUOSabotageType::JamPrinter;
+
+	/** Kill target employee id */
+	UPROPERTY(BlueprintReadOnly, Category="Interaction")
+	int32 VictimId = INDEX_NONE;
+
 	bool IsSameAction(const FUOInteractionOption& Other) const
 	{
-		return Kind == Other.Kind && SubObjectiveId == Other.SubObjectiveId && Item == Other.Item;
+		return Kind == Other.Kind && SubObjectiveId == Other.SubObjectiveId && Item == Other.Item && Sabotage == Other.Sabotage && VictimId == Other.VictimId;
 	}
 };

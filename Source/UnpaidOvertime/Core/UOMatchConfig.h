@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UOCoreTypes.h"
+#include "UOKillerTypes.h"
 #include "UOMatchConfig.generated.h"
 
 /** Reason a match configuration was rejected */
@@ -72,11 +73,23 @@ struct FUOMatchConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Config")
 	int32 HumanPlayers = 1;
 
+	/** Employees in total (humans + AIs), MinTeamSize..MaxTeamSize. Killers: floor(TeamSize / 3), at least 1. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Config")
+	int32 TeamSize = MinTeamSize;
+
+	/** Who may be the killer. Random by default; AlwaysHuman is a debug option (hidden in Shipping). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Config")
+	EUOKillerAssignment KillerAssignment = EUOKillerAssignment::Random;
+
+	/** Design doc 2.2 "El asesino puede matar": No by default */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Config")
+	bool bKillerCanKill = false;
+
 	/** Generation seed. 0 means "pick a random one when the day starts". */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Config")
 	int32 Seed = 0;
 
-	/** AI employees needed to fill the team up to the minimum team size */
+	/** AI employees needed to fill the team up to the team size */
 	int32 GetAIPlayers() const;
 
 	/** Humans plus AIs */

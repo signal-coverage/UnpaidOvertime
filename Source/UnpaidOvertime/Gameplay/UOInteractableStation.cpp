@@ -1,6 +1,8 @@
-// UNPAID: OVERTIME - greybox interactable station.
+// UNPAID: OVERTIME - interactable station.
 
 #include "UOInteractableStation.h"
+#include "Components/BoxComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
@@ -43,6 +45,12 @@ namespace UOStationPrivate
 
 	const FLinearColor DoneColor(0.15f, 0.65f, 0.22f);
 	const FName ColorParameter(TEXT("Color"));
+
+	/** Margin added around furniture bounds so the box is hit before the mesh itself */
+	constexpr float InteractionBoxMargin = 4.f;
+
+	/** Small furniture (desk printers, inbox trays) gets a minimum box so it is easy to aim at */
+	constexpr float MinInteractionHalfExtent = 18.f;
 }
 
 AUOInteractableStation::AUOInteractableStation()
@@ -77,6 +85,18 @@ AUOInteractableStation::AUOInteractableStation()
 	Label->SetWorldSize(16.f);
 	Label->SetTextRenderColor(FColor::White);
 	Label->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	InteractionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionBox"));
+	InteractionBox->SetupAttachment(Root);
+	InteractionBox->SetMobility(EComponentMobility::Movable);
+	InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	InteractionBox->SetCollisionObjectType(ECC_WorldDynamic);
+	InteractionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InteractionBox->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	InteractionBox->SetCanEverAffectNavigation(false);
+	InteractionBox->SetGenerateOverlapEvents(false);
+	InteractionBox->SetHiddenInGame(true);
+	InteractionBox->SetUsingAbsoluteRotation(true);
 }
 
 void AUOInteractableStation::ConfigureStation(FName InStationId, EUOStationType InType, int32 InOrdinal)
@@ -85,6 +105,7 @@ void AUOInteractableStation::ConfigureStation(FName InStationId, EUOStationType 
 	StationType = InType;
 	Ordinal = InOrdinal;
 	bWorkDone = false;
+	Furniture.Reset();
 
 	const UOStationPrivate::FStationLook Look = UOStationPrivate::GetLook(StationType);
 	BodyDepth = Look.BodySize.X;
@@ -112,13 +133,83 @@ void AUOInteractableStation::ConfigureStation(FName InStationId, EUOStationType 
 	RefreshVisuals();
 }
 
+void AUOInteractableStation::ConfigureFromAnchor(FName InStationId, EUOStationType InType, int32 InOrdinal, AActor* InFurniture, const FText& InRoomName)
+{
+	using namespace UOStationPrivate;
+
+	StationId = InStationId;
+	StationType = InType;
+	Ordinal = InOrdinal;
+	RoomName = InRoomName;
+	bWorkDone = false;
+	Furniture = InFurniture;
+
+	// The level furniture is the look: no greybox body or floating label
+	for (UPrimitiveComponent* Greybox : { static_cast<UPrimitiveComponent*>(BodyMesh), static_cast<UPrimitiveComponent*>(AccentMesh), static_cast<UPrimitiveComponent*>(Label) })
+	{
+		Greybox->SetVisibility(false);
+		Greybox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Greybox->SetCanEverAffectNavigation(false);
+	}
+
+	FVector Origin = GetActorLocation() + GetActorForwardVector() * 60.f + FVector(0.f, 0.f, 80.f);
+	FVector Extent(30.f, 30.f, 40.f);
+	if (InFurniture)
+	{
+		InFurniture->GetActorBounds(false, Origin, Extent, false);
+	}
+	FurnitureCenter = Origin;
+
+	Extent += FVector(InteractionBoxMargin);
+	Extent = Extent.ComponentMax(FVector(MinInteractionHalfExtent));
+	InteractionBox->SetWorldLocation(Origin);
+	InteractionBox->SetWorldRotation(FRotator::ZeroRotator);
+	InteractionBox->SetBoxExtent(Extent, false);
+	InteractionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	// Distance from the stand point to the furniture front, used by the greybox-style helpers
+	BodyDepth = 0.f;
+}
+
+void AUOInteractableStation::SetJammed(bool bInJammed)
+{
+	if (bJammed == bInJammed)
+	{
+		return;
+	}
+	bJammed = bInJammed;
+	if (bJammed && !JamLight)
+	{
+		JamLight = NewObject<UPointLightComponent>(this, TEXT("JamLight"));
+		JamLight->SetupAttachment(Root);
+		JamLight->RegisterComponent();
+		JamLight->SetMobility(EComponentMobility::Movable);
+		JamLight->SetLightColor(FLinearColor(1.f, 0.08f, 0.05f));
+		JamLight->SetAttenuationRadius(160.f);
+		JamLight->SetIntensityUnits(ELightUnits::Candelas);
+		JamLight->SetIntensity(6.f);
+		JamLight->SetCastShadows(false);
+	}
+	if (JamLight)
+	{
+		JamLight->SetWorldLocation(GetFocusLocation() + FVector(0.f, 0.f, 45.f));
+		JamLight->SetVisibility(bJammed);
+	}
+	RefreshVisuals();
+}
+
 FText AUOInteractableStation::GetDisplayName() const
 {
+	const FText TypeName = UOText::GetStationTypeName(StationType);
+	if (!RoomName.IsEmpty())
+	{
+		return FText::Format(LOCTEXT("StationRoomFormat", "{0} · {1}"), TypeName, RoomName);
+	}
 	if (StationType == EUOStationType::SupplyCloset)
 	{
-		return UOText::GetStationTypeName(StationType);
+		return TypeName;
 	}
-	return FText::Format(LOCTEXT("StationNameFormat", "{0} {1}"), UOText::GetStationTypeName(StationType), FText::AsNumber(Ordinal));
+	return FText::Format(LOCTEXT("StationNameFormat", "{0} {1}"), TypeName, FText::AsNumber(Ordinal));
 }
 
 EUOItemType AUOInteractableStation::GetProvidedItem() const
@@ -133,7 +224,21 @@ EUOItemType AUOInteractableStation::GetProvidedItem() const
 
 FVector AUOInteractableStation::GetInteractionLocation() const
 {
+	if (Furniture.IsValid())
+	{
+		// The anchor already is the stand point
+		return GetActorLocation();
+	}
 	return GetActorLocation() + GetActorForwardVector() * (BodyDepth * 0.5f + 75.f);
+}
+
+FVector AUOInteractableStation::GetFocusLocation() const
+{
+	if (Furniture.IsValid())
+	{
+		return FurnitureCenter;
+	}
+	return GetActorLocation() + FVector(0.f, 0.f, 90.f);
 }
 
 void AUOInteractableStation::SetWorkDone(bool bInWorkDone)
@@ -145,15 +250,54 @@ void AUOInteractableStation::SetWorkDone(bool bInWorkDone)
 	}
 }
 
+void AUOInteractableStation::SetHighlighted(bool bInHighlighted)
+{
+	if (bHighlighted == bInHighlighted)
+	{
+		return;
+	}
+	bHighlighted = bInHighlighted;
+
+	TArray<UPrimitiveComponent*> Primitives;
+	if (AActor* FurnitureActor = Furniture.Get())
+	{
+		FurnitureActor->GetComponents<UPrimitiveComponent>(Primitives);
+	}
+	else
+	{
+		Primitives = { BodyMesh, AccentMesh };
+	}
+
+	for (UPrimitiveComponent* Primitive : Primitives)
+	{
+		if (Primitive && Primitive->IsVisible())
+		{
+			Primitive->SetCustomDepthStencilValue(HighlightStencilValue);
+			Primitive->SetRenderCustomDepth(bHighlighted);
+		}
+	}
+}
+
 void AUOInteractableStation::RefreshVisuals()
 {
+	if (Furniture.IsValid())
+	{
+		return;
+	}
+
 	if (BodyMaterial)
 	{
 		BodyMaterial->SetVectorParameterValue(UOStationPrivate::ColorParameter, bWorkDone ? UOStationPrivate::DoneColor : BodyColor);
 	}
 
 	const FText Name = GetDisplayName();
-	Label->SetText(bWorkDone ? FText::Format(LOCTEXT("StationDoneLabel", "{0}\nDONE"), Name) : Name);
+	if (bJammed)
+	{
+		Label->SetText(FText::Format(LOCTEXT("StationJamLabel", "{0}\nJAMMED"), Name));
+		Label->SetTextRenderColor(FColor(255, 90, 80));
+		return;
+	}
+	Label->SetText(bWorkDone ?FText::Format(LOCTEXT("StationDoneLabel", "{0}\nDONE"), Name) : Name);
 	Label->SetTextRenderColor(bWorkDone ? FColor(120, 255, 140) : FColor::White);
 }
 

@@ -55,6 +55,9 @@ public:
 	/** Drops (returns to supply) the carried item */
 	bool DropCarriedItem(AUOPlayerState* Employee);
 
+	/** A botched work attempt (AI precision roll): the device logs a job with no output (an innocent failure) */
+	void RecordFailedAttempt(AUOPlayerState* Employee, AUOInteractableStation* Station);
+
 	/** AI coordination: claim a sub-objective so other AIs skip it */
 	bool TryClaim(AUOPlayerState* Employee, int32 SubObjectiveId);
 	bool ReleaseClaim(AUOPlayerState* Employee, int32 SubObjectiveId);
@@ -103,6 +106,9 @@ protected:
 	bool IsWithinReach(const AUOPlayerState* Employee, const AUOInteractableStation* Station) const;
 
 	void CompleteSubObjective(AUOPlayerState* Employee, AUOInteractableStation* Station, int32 SubObjectiveId);
+
+	/** Device traces of a completion (activity board report + the station's device line). Everyone's work is real. */
+	void RecordWorkTraces(const AUOPlayerState* Employee, const AUOInteractableStation* Station, int32 SubObjectiveId);
 
 	void LogEvidence(const AUOPlayerState* Employee, FName StationId, EUOEvidenceAction Action, EUOItemType Item, int32 SubObjectiveId);
 

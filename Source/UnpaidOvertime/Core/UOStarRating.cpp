@@ -69,9 +69,9 @@ FText FUOStarRating::GetConsequenceLabel(EUOStarConsequence Consequence)
 	switch (Consequence)
 	{
 	case EUOStarConsequence::Fired:					return LOCTEXT("ConsequenceFired", "Fired");
-	case EUOStarConsequence::CutVoteCandidate:		return LOCTEXT("ConsequenceCutVote", "Cut-vote candidate (coming in M3)");
+	case EUOStarConsequence::CutVoteCandidate:		return LOCTEXT("ConsequenceCutVote", "Cut-vote candidate");
 	case EUOStarConsequence::Safe:					return LOCTEXT("ConsequenceSafe", "Safe");
-	case EUOStarConsequence::PromotionAvailable:	return LOCTEXT("ConsequencePromotion", "Promotion available (coming in M3)");
+	case EUOStarConsequence::PromotionAvailable:	return LOCTEXT("ConsequencePromotion", "Promotion available");
 	default:										return FText::GetEmpty();
 	}
 }

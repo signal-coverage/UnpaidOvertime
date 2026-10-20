@@ -23,6 +23,10 @@ void AUOGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AUOGameState, Tasks);
 	DOREPLIFETIME(AUOGameState, Employees);
 	DOREPLIFETIME(AUOGameState, EvidenceLog);
+	DOREPLIFETIME(AUOGameState, Evaluation);
+	DOREPLIFETIME(AUOGameState, TraceLog);
+	DOREPLIFETIME(AUOGameState, RevealedKillers);
+	DOREPLIFETIME(AUOGameState, RevealedEmployees);
 }
 
 FString AUOGameState::GetClockText() const
@@ -40,6 +44,12 @@ AUOPlayerState* AUOGameState::FindEmployee(int32 EmployeeId) const
 		}
 	}
 	return nullptr;
+}
+
+FString AUOGameState::GetEmployeeName(int32 EmployeeId) const
+{
+	const AUOPlayerState* Employee = FindEmployee(EmployeeId);
+	return Employee ? Employee->GetDisplayName() : FString();
 }
 
 int32 AUOGameState::CountAliveEmployees() const
@@ -64,4 +74,15 @@ void AUOGameState::AddEmployee(AUOPlayerState* Employee)
 	{
 		Employees.AddUnique(Employee);
 	}
+}
+
+bool AUOGameState::IsRoleRevealed(int32 EmployeeId, bool& bOutKiller) const
+{
+	bOutKiller = RevealedKillers.Contains(EmployeeId);
+	return bOutKiller || RevealedEmployees.Contains(EmployeeId);
+}
+
+void AUOGameState::RevealRole(int32 EmployeeId, bool bKiller)
+{
+	(bKiller ? RevealedKillers : RevealedEmployees).AddUnique(EmployeeId);
 }

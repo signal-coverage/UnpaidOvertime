@@ -1,0 +1,734 @@
+{
+ "version": 1,
+ "sample_rate": 44100,
+ "sounds": [
+  {
+   "id": "Footstep.Carpet",
+   "variant": 1,
+   "file": "Footstep_Carpet_01.wav",
+   "asset": "SW_Footstep_Carpet_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Carpet",
+   "variant": 2,
+   "file": "Footstep_Carpet_02.wav",
+   "asset": "SW_Footstep_Carpet_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Carpet",
+   "variant": 3,
+   "file": "Footstep_Carpet_03.wav",
+   "asset": "SW_Footstep_Carpet_03",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Carpet",
+   "variant": 4,
+   "file": "Footstep_Carpet_04.wav",
+   "asset": "SW_Footstep_Carpet_04",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Carpet",
+   "variant": 5,
+   "file": "Footstep_Carpet_05.wav",
+   "asset": "SW_Footstep_Carpet_05",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Carpet",
+   "variant": 6,
+   "file": "Footstep_Carpet_06.wav",
+   "asset": "SW_Footstep_Carpet_06",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 1,
+   "file": "Footstep_Tile_01.wav",
+   "asset": "SW_Footstep_Tile_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 2,
+   "file": "Footstep_Tile_02.wav",
+   "asset": "SW_Footstep_Tile_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 3,
+   "file": "Footstep_Tile_03.wav",
+   "asset": "SW_Footstep_Tile_03",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 4,
+   "file": "Footstep_Tile_04.wav",
+   "asset": "SW_Footstep_Tile_04",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 5,
+   "file": "Footstep_Tile_05.wav",
+   "asset": "SW_Footstep_Tile_05",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Footstep.Tile",
+   "variant": 6,
+   "file": "Footstep_Tile_06.wav",
+   "asset": "SW_Footstep_Tile_06",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Player.Jump",
+   "variant": 1,
+   "file": "Player_Jump_01.wav",
+   "asset": "SW_Player_Jump_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Player.Jump",
+   "variant": 2,
+   "file": "Player_Jump_02.wav",
+   "asset": "SW_Player_Jump_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Player.Land",
+   "variant": 1,
+   "file": "Player_Land_01.wav",
+   "asset": "SW_Player_Land_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Player.Land",
+   "variant": 2,
+   "file": "Player_Land_02.wav",
+   "asset": "SW_Player_Land_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Interact.Start",
+   "variant": 1,
+   "file": "Interact_Start.wav",
+   "asset": "SW_Interact_Start",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Interact.HoldLoop",
+   "variant": 1,
+   "file": "Interact_HoldLoop.wav",
+   "asset": "SW_Interact_HoldLoop",
+   "loop": true,
+   "category": "sfx"
+  },
+  {
+   "id": "Interact.Complete",
+   "variant": 1,
+   "file": "Interact_Complete.wav",
+   "asset": "SW_Interact_Complete",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Interact.Denied",
+   "variant": 1,
+   "file": "Interact_Denied.wav",
+   "asset": "SW_Interact_Denied",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Printer.Cartridge",
+   "variant": 1,
+   "file": "Printer_Cartridge.wav",
+   "asset": "SW_Printer_Cartridge",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Printer.WhirLoop",
+   "variant": 1,
+   "file": "Printer_WhirLoop.wav",
+   "asset": "SW_Printer_WhirLoop",
+   "loop": true,
+   "category": "sfx"
+  },
+  {
+   "id": "Printer.Feed",
+   "variant": 1,
+   "file": "Printer_Feed.wav",
+   "asset": "SW_Printer_Feed",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Coffee.GurgleLoop",
+   "variant": 1,
+   "file": "Coffee_GurgleLoop.wav",
+   "asset": "SW_Coffee_GurgleLoop",
+   "loop": true,
+   "category": "sfx"
+  },
+  {
+   "id": "Coffee.Beep",
+   "variant": 1,
+   "file": "Coffee_Beep.wav",
+   "asset": "SW_Coffee_Beep",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Drawer.Open",
+   "variant": 1,
+   "file": "Drawer_Open.wav",
+   "asset": "SW_Drawer_Open",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Drawer.Close",
+   "variant": 1,
+   "file": "Drawer_Close_01.wav",
+   "asset": "SW_Drawer_Close_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Drawer.Close",
+   "variant": 2,
+   "file": "Drawer_Close_02.wav",
+   "asset": "SW_Drawer_Close_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Paper.Rustle",
+   "variant": 1,
+   "file": "Paper_Rustle_01.wav",
+   "asset": "SW_Paper_Rustle_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Paper.Rustle",
+   "variant": 2,
+   "file": "Paper_Rustle_02.wav",
+   "asset": "SW_Paper_Rustle_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Paper.Rustle",
+   "variant": 3,
+   "file": "Paper_Rustle_03.wav",
+   "asset": "SW_Paper_Rustle_03",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Supply.Rummage",
+   "variant": 1,
+   "file": "Supply_Rummage_01.wav",
+   "asset": "SW_Supply_Rummage_01",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Supply.Rummage",
+   "variant": 2,
+   "file": "Supply_Rummage_02.wav",
+   "asset": "SW_Supply_Rummage_02",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Item.Pickup",
+   "variant": 1,
+   "file": "Item_Pickup.wav",
+   "asset": "SW_Item_Pickup",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Item.Drop",
+   "variant": 1,
+   "file": "Item_Drop.wav",
+   "asset": "SW_Item_Drop",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Task.Chime",
+   "variant": 1,
+   "file": "Task_Chime.wav",
+   "asset": "SW_Task_Chime",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Task.AllDone",
+   "variant": 1,
+   "file": "Task_AllDone.wav",
+   "asset": "SW_Task_AllDone",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Day.ShiftBell",
+   "variant": 1,
+   "file": "Day_ShiftBell.wav",
+   "asset": "SW_Day_ShiftBell",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Day.OvertimeStinger",
+   "variant": 1,
+   "file": "Day_OvertimeStinger.wav",
+   "asset": "SW_Day_OvertimeStinger",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Day.PowerDown",
+   "variant": 1,
+   "file": "Day_PowerDown.wav",
+   "asset": "SW_Day_PowerDown",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Day.ClosingBell",
+   "variant": 1,
+   "file": "Day_ClosingBell.wav",
+   "asset": "SW_Day_ClosingBell",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Eval.Star1",
+   "variant": 1,
+   "file": "Eval_Star1.wav",
+   "asset": "SW_Eval_Star1",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Eval.Star2",
+   "variant": 1,
+   "file": "Eval_Star2.wav",
+   "asset": "SW_Eval_Star2",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Eval.Star3",
+   "variant": 1,
+   "file": "Eval_Star3.wav",
+   "asset": "SW_Eval_Star3",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Eval.Fired",
+   "variant": 1,
+   "file": "Eval_Fired.wav",
+   "asset": "SW_Eval_Fired",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Eval.Stamp",
+   "variant": 1,
+   "file": "Eval_Stamp.wav",
+   "asset": "SW_Eval_Stamp",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Boss.Question",
+   "variant": 1,
+   "file": "Boss_Question.wav",
+   "asset": "SW_Boss_Question",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Boss.Tick",
+   "variant": 1,
+   "file": "Boss_Tick.wav",
+   "asset": "SW_Boss_Tick",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Boss.Correct",
+   "variant": 1,
+   "file": "Boss_Correct.wav",
+   "asset": "SW_Boss_Correct",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Boss.Wrong",
+   "variant": 1,
+   "file": "Boss_Wrong.wav",
+   "asset": "SW_Boss_Wrong",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Vote.Cast",
+   "variant": 1,
+   "file": "Vote_Cast.wav",
+   "asset": "SW_Vote_Cast",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Role.Employee",
+   "variant": 1,
+   "file": "Role_Employee.wav",
+   "asset": "SW_Role_Employee",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Role.Killer",
+   "variant": 1,
+   "file": "Role_Killer.wav",
+   "asset": "SW_Role_Killer",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Sabotage.PrinterJam",
+   "variant": 1,
+   "file": "Sabotage_PrinterJam.wav",
+   "asset": "SW_Sabotage_PrinterJam",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Sabotage.PowerCut",
+   "variant": 1,
+   "file": "Sabotage_PowerCut.wav",
+   "asset": "SW_Sabotage_PowerCut",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Sabotage.Lock",
+   "variant": 1,
+   "file": "Sabotage_Lock.wav",
+   "asset": "SW_Sabotage_Lock",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Sabotage.FileCorrupt",
+   "variant": 1,
+   "file": "Sabotage_FileCorrupt.wav",
+   "asset": "SW_Sabotage_FileCorrupt",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Sabotage.PropMove",
+   "variant": 1,
+   "file": "Sabotage_PropMove.wav",
+   "asset": "SW_Sabotage_PropMove",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Terminal.Open",
+   "variant": 1,
+   "file": "Terminal_Open.wav",
+   "asset": "SW_Terminal_Open",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Terminal.Beep",
+   "variant": 1,
+   "file": "Terminal_Beep.wav",
+   "asset": "SW_Terminal_Beep",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.Gavel",
+   "variant": 1,
+   "file": "Meeting_Gavel.wav",
+   "asset": "SW_Meeting_Gavel",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.Bell",
+   "variant": 1,
+   "file": "Meeting_Bell.wav",
+   "asset": "SW_Meeting_Bell",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Kill.Sting",
+   "variant": 1,
+   "file": "Kill_Sting.wav",
+   "asset": "SW_Kill_Sting",
+   "loop": false,
+   "category": "sfx"
+  },
+  {
+   "id": "Meeting.VoteTick",
+   "variant": 1,
+   "file": "Meeting_VoteTick.wav",
+   "asset": "SW_Meeting_VoteTick",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.TimerTick",
+   "variant": 1,
+   "file": "Meeting_TimerTick.wav",
+   "asset": "SW_Meeting_TimerTick",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.RPSReveal",
+   "variant": 1,
+   "file": "Meeting_RPSReveal.wav",
+   "asset": "SW_Meeting_RPSReveal",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.Probation",
+   "variant": 1,
+   "file": "Meeting_Probation.wav",
+   "asset": "SW_Meeting_Probation",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Meeting.Forgery",
+   "variant": 1,
+   "file": "Meeting_Forgery.wav",
+   "asset": "SW_Meeting_Forgery",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.Hover",
+   "variant": 1,
+   "file": "UI_Hover.wav",
+   "asset": "SW_UI_Hover",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.Click",
+   "variant": 1,
+   "file": "UI_Click.wav",
+   "asset": "SW_UI_Click",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.Back",
+   "variant": 1,
+   "file": "UI_Back.wav",
+   "asset": "SW_UI_Back",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.Toggle",
+   "variant": 1,
+   "file": "UI_Toggle.wav",
+   "asset": "SW_UI_Toggle",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.SliderTick",
+   "variant": 1,
+   "file": "UI_SliderTick.wav",
+   "asset": "SW_UI_SliderTick",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.Error",
+   "variant": 1,
+   "file": "UI_Error.wav",
+   "asset": "SW_UI_Error",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.MenuOpen",
+   "variant": 1,
+   "file": "UI_MenuOpen.wav",
+   "asset": "SW_UI_MenuOpen",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "UI.MenuClose",
+   "variant": 1,
+   "file": "UI_MenuClose.wav",
+   "asset": "SW_UI_MenuClose",
+   "loop": false,
+   "category": "ui"
+  },
+  {
+   "id": "Amb.Hum",
+   "variant": 1,
+   "file": "Amb_Hum.wav",
+   "asset": "SW_Amb_Hum",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.RoomTone",
+   "variant": 1,
+   "file": "Amb_RoomTone.wav",
+   "asset": "SW_Amb_RoomTone",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Vent",
+   "variant": 1,
+   "file": "Amb_Vent.wav",
+   "asset": "SW_Amb_Vent",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.OfficeMurmur",
+   "variant": 1,
+   "file": "Amb_OfficeMurmur.wav",
+   "asset": "SW_Amb_OfficeMurmur",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Fridge",
+   "variant": 1,
+   "file": "Amb_Fridge.wav",
+   "asset": "SW_Amb_Fridge",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Vending",
+   "variant": 1,
+   "file": "Amb_Vending.wav",
+   "asset": "SW_Amb_Vending",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.ClockTick",
+   "variant": 1,
+   "file": "Amb_ClockTick.wav",
+   "asset": "SW_Amb_ClockTick",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Exterior",
+   "variant": 1,
+   "file": "Amb_Exterior.wav",
+   "asset": "SW_Amb_Exterior",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.OvertimeDrone",
+   "variant": 1,
+   "file": "Amb_OvertimeDrone.wav",
+   "asset": "SW_Amb_OvertimeDrone",
+   "loop": true,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Creak",
+   "variant": 1,
+   "file": "Amb_Creak_01.wav",
+   "asset": "SW_Amb_Creak_01",
+   "loop": false,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Creak",
+   "variant": 2,
+   "file": "Amb_Creak_02.wav",
+   "asset": "SW_Amb_Creak_02",
+   "loop": false,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Creak",
+   "variant": 3,
+   "file": "Amb_Creak_03.wav",
+   "asset": "SW_Amb_Creak_03",
+   "loop": false,
+   "category": "ambience"
+  },
+  {
+   "id": "Amb.Creak",
+   "variant": 4,
+   "file": "Amb_Creak_04.wav",
+   "asset": "SW_Amb_Creak_04",
+   "loop": false,
+   "category": "ambience"
+  },
+  {
+   "id": "Music.Menu",
+   "variant": 1,
+   "file": "Music_Menu.wav",
+   "asset": "SW_Music_Menu",
+   "loop": true,
+   "category": "music"
+  },
+  {
+   "id": "Music.Dark",
+   "variant": 1,
+   "file": "Music_Dark.wav",
+   "asset": "SW_Music_Dark",
+   "loop": true,
+   "category": "music"
+  }
+ ]
+}

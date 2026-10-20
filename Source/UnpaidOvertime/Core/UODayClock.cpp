@@ -8,7 +8,7 @@ namespace UODayClockPrivate
 	static TAutoConsoleVariable<float> CVarShiftSecondsOverride(
 		TEXT("uo.ShiftSecondsOverride"),
 		0.f,
-		TEXT("Overrides the shift length in seconds for quick testing (0 = use the configured day length). Applies to the next day started."),
+		TEXT("Overrides the base shift length in seconds for quick testing (0 = use the configured day length; the per-day shift scale still applies). Applies to the next day started."),
 		ECVF_Default);
 }
 
@@ -30,6 +30,11 @@ float FUODayClock::ResolveShiftSeconds(EUODayLength DayLength, float OverrideSec
 float FUODayClock::GetShiftSecondsWithConsoleOverride(EUODayLength DayLength)
 {
 	return ResolveShiftSeconds(DayLength, UODayClockPrivate::CVarShiftSecondsOverride.GetValueOnGameThread());
+}
+
+float FUODayClock::GetConsoleShiftSecondsOverride()
+{
+	return UODayClockPrivate::CVarShiftSecondsOverride.GetValueOnGameThread();
 }
 
 float FUODayClock::ComputeTimeOfDayMinutes(float ElapsedSeconds, float ShiftLengthSeconds)

@@ -61,7 +61,7 @@ FUOConfigValidationResult FUOConfigValidationResult::Fail(EUOConfigError InError
 
 int32 FUOMatchConfig::GetAIPlayers() const
 {
-	return FMath::Max(0, MinTeamSize - FMath::Max(0, HumanPlayers));
+	return FMath::Max(0, FMath::Clamp(TeamSize, MinTeamSize, MaxTeamSize) - FMath::Max(0, HumanPlayers));
 }
 
 int32 FUOMatchConfig::GetTotalEmployees() const
@@ -87,7 +87,7 @@ FUOConfigValidationResult FUOMatchConfig::Validate() const
 		return FUOConfigValidationResult::Fail(EUOConfigError::TasksPerDayOutOfRange);
 	}
 
-	if (HumanPlayers < 1 || HumanPlayers > MaxTeamSize)
+	if (HumanPlayers < 1 || HumanPlayers > MaxTeamSize || TeamSize < MinTeamSize || TeamSize > MaxTeamSize)
 	{
 		return FUOConfigValidationResult::Fail(EUOConfigError::PlayerCountOutOfRange);
 	}
